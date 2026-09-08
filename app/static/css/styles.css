@@ -1,0 +1,118 @@
+/* PriceSnap — Professional Styles */
+
+/* Pipeline Steps */
+.pipeline-step {
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.pipeline-step.active {
+    background-color: #EEF2FF;
+    border-left: 3px solid #6366F1;
+}
+.pipeline-step.completed {
+    background-color: #F0FDF4;
+    border-left: 3px solid #22C55E;
+}
+
+/* Platform Card Headers */
+.amazon-header {
+    background: linear-gradient(135deg, #FFF8EE 0%, #FFF3DC 100%);
+    border-bottom: 1px solid #FFE4A0;
+}
+.flipkart-header {
+    background: linear-gradient(135deg, #EEF4FF 0%, #DEEAFF 100%);
+    border-bottom: 1px solid #BFCFFF;
+}
+
+/* Stock Badges */
+.badge-in-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #DCFCE7;
+    color: #15803D;
+    border: 1px solid #BBF7D0;
+}
+.badge-out-of-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #FEE2E2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+}
+.badge-unavailable {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+}
+.badge-not-found {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #F1F5F9;
+    color: #64748B;
+    border: 1px solid #E2E8F0;
+}
+
+/* Winner card glow */
+.winner-card-amazon {
+    border-color: #FF9900 !important;
+    box-shadow: 0 0 0 2px #FF990030, 0 4px 20px -4px #FF990030;
+}
+.winner-card-flipkart {
+    border-color: #2874F0 !important;
+    box-shadow: 0 0 0 2px #2874F030, 0 4px 20px -4px #2874F030;
+}
+
+/* OOS Overlay inside card */
+.oos-overlay {
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 8px,
+        rgba(239, 68, 68, 0.03) 8px,
+        rgba(239, 68, 68, 0.03) 16px
+    );
+}
+
+/* Spec table alternating rows */
+#specTableBody tr:nth-child(even) {
+    background-color: #FAFAFA;
+}
+#specTableBody td {
+    padding: 10px 20px;
+    font-size: 13px;
+    color: #374151;
+}
+#specTableBody td:first-child {
+    color: #6B7280;
+    font-weight: 500;
+}
+#specTableBody .winner-cell {
+    color: #15803D;
+    font-weight: 700;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }

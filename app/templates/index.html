@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceSnap — Amazon vs Flipkart Smartphone Price Comparison</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        amazon: '#FF9900',
+                        flipkart: '#2874F0',
+                        surface: '#F8FAFC',
+                        card: '#FFFFFF',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-surface min-h-screen font-sans text-gray-900">
+
+<!-- ===== NAVBAR ===== -->
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-xl flex items-center justify-center shadow-md">
+                    <span class="text-white font-black text-lg">⚡</span>
+                </div>
+                <div>
+                    <span class="font-black text-xl text-gray-900 tracking-tight">PriceSnap</span>
+                    <span class="ml-2 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">India</span>
+                </div>
+            </div>
+
+            <!-- Nav Controls -->
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <span class="text-xs font-medium text-gray-500 hidden sm:block">Live Scrape</span>
+                    <div class="relative">
+                        <input type="checkbox" id="liveScrapeToggle" class="sr-only peer">
+                        <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5 after:shadow-sm"></div>
+                    </div>
+                </label>
+                <button onclick="window.location.href='/api/export?format=csv'"
+                    class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export CSV
+                </button>
+                <button onclick="window.location.href='/api/export?format=json'"
+                    class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 border border-gray-200 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export JSON
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== HERO SEARCH SECTION ===== -->
+<section class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white pt-12 pb-10">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+        <div class="flex items-center justify-center gap-4 mb-6">
+            <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#FF9900] inline-block"></span>
+                <span class="text-xs font-semibold text-white/90">Amazon India</span>
+            </div>
+            <span class="text-white/30 font-light text-2xl">⟷</span>
+            <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#2874F0] inline-block"></span>
+                <span class="text-xs font-semibold text-white/90">Flipkart</span>
+            </div>
+        </div>
+
+        <h1 class="text-3xl sm:text-5xl font-black tracking-tight mb-3">
+            Find the <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">Best Price</span><br>
+            for Any Smartphone
+        </h1>
+        <p class="text-white/50 text-sm sm:text-base max-w-xl mx-auto mb-8">
+            Real-time scraping. Exact variant matching. Live stock status.
+        </p>
+
+        <!-- Search Form -->
+        <form id="searchForm" class="relative max-w-2xl mx-auto">
+            <div class="flex items-center bg-white rounded-2xl shadow-2xl shadow-black/30 overflow-hidden ring-2 ring-white/0 focus-within:ring-indigo-400 transition-all">
+                <svg class="w-5 h-5 text-gray-400 ml-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input id="searchInput" type="text"
+                    placeholder='Try "Apple iPhone 15 128GB" or "Samsung Galaxy S24 256GB"'
+                    class="flex-1 px-4 py-4 text-gray-900 text-sm outline-none bg-transparent placeholder-gray-400"
+                    value="Apple iPhone 15 128GB">
+                <button id="searchBtn" type="submit"
+                    class="m-1.5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition shadow-lg flex items-center gap-2 flex-shrink-0">
+                    <svg id="searchSpinner" class="animate-spin w-4 h-4 hidden" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="searchBtnText">Compare</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Popular Quick Pills -->
+        <div class="flex flex-wrap gap-2 justify-center mt-5" id="popularPills"></div>
+    </div>
+</section>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+    <!-- Pipeline Telemetry Bar -->
+    <section class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            <span class="text-xs font-bold uppercase tracking-widest text-gray-400">Live Pipeline Telemetry</span>
+        </div>
+        <div class="grid grid-cols-5 divide-x divide-gray-100">
+            <!-- Stage 1 -->
+            <div id="pipelineStep1" class="pipeline-step px-4 py-3">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Stage 1</div>
+                <div class="text-xs font-bold text-gray-700 mt-0.5">Query Parser</div>
+                <div id="stepStatus1" class="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>Waiting
+                </div>
+                <div id="stepTime1" class="text-[10px] font-mono text-gray-400 mt-0.5">—</div>
+            </div>
+            <!-- Stage 2 -->
+            <div id="pipelineStep2" class="pipeline-step px-4 py-3">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Stage 2</div>
+                <div class="text-xs font-bold text-gray-700 mt-0.5">Concurrent Scrape</div>
+                <div id="stepStatus2" class="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>Waiting
+                </div>
+                <div id="stepTime2" class="text-[10px] font-mono text-gray-400 mt-0.5">—</div>
+            </div>
+            <!-- Stage 3 -->
+            <div id="pipelineStep3" class="pipeline-step px-4 py-3">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Stage 3</div>
+                <div class="text-xs font-bold text-gray-700 mt-0.5">Strict Matching</div>
+                <div id="stepStatus3" class="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>Waiting
+                </div>
+                <div id="stepTime3" class="text-[10px] font-mono text-gray-400 mt-0.5">—</div>
+            </div>
+            <!-- Stage 4 -->
+            <div id="pipelineStep4" class="pipeline-step px-4 py-3">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Stage 4</div>
+                <div class="text-xs font-bold text-gray-700 mt-0.5">Stock & Pricing</div>
+                <div id="stepStatus4" class="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>Waiting
+                </div>
+                <div id="stepTime4" class="text-[10px] font-mono text-gray-400 mt-0.5">—</div>
+            </div>
+            <!-- Stage 5 -->
+            <div id="pipelineStep5" class="pipeline-step px-4 py-3">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Stage 5</div>
+                <div class="text-xs font-bold text-gray-700 mt-0.5">Neon PostgreSQL</div>
+                <div id="stepStatus5" class="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>Waiting
+                </div>
+                <div id="stepTime5" class="text-[10px] font-mono text-gray-400 mt-0.5">—</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deal Winner Banner -->
+    <div id="winnerBanner" class="rounded-2xl p-5 bg-white border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+            <div id="winnerText" class="text-lg font-bold text-gray-800">Searching for best prices...</div>
+            <div id="winnerSub" class="text-sm text-gray-500 mt-0.5">Scraping Amazon India and Flipkart in parallel</div>
+        </div>
+        <div id="winnerBadge" class="px-4 py-2 rounded-xl text-sm font-bold bg-gray-100 text-gray-500">⏳ Analyzing</div>
+    </div>
+
+    <!-- Platform Comparison Cards -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Amazon Card -->
+        <div id="amazonCard" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all">
+            <!-- Platform Header -->
+            <div class="amazon-header px-5 pt-5 pb-4 flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-[#FF9900] rounded-xl flex items-center justify-center text-xl font-black shadow">
+                        <span class="text-slate-900 text-base font-black">a</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-900 text-sm">Amazon India</div>
+                        <div class="text-xs text-gray-400">amazon.in</div>
+                    </div>
+                </div>
+                <div id="amzStock" class="flex-shrink-0"><!-- Stock badge --></div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="px-5 pb-5 space-y-4">
+                <div class="flex gap-4 items-start">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <img id="amzImg" src="" alt="Amazon Product"
+                            class="max-h-full max-w-full object-contain p-1"
+                            onerror="this.src='https://via.placeholder.com/120x120?text=📱'">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="amzTitle" class="font-bold text-gray-900 text-sm leading-snug line-clamp-3">
+                            Loading Amazon listing...
+                        </h3>
+                        <div id="amzStockMsg" class="text-xs text-gray-400 mt-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- Price Section -->
+                <div id="amzPriceSection" class="border-t border-gray-100 pt-4">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Rating & Specs Row -->
+                <div class="flex items-center justify-between text-xs text-gray-500 border-t border-gray-100 pt-3">
+                    <div id="amzRating" class="flex items-center gap-1">
+                        <span class="text-amber-400">★</span>—
+                    </div>
+                    <div class="text-xs text-gray-400">Official Seller</div>
+                </div>
+
+                <!-- Buy Button -->
+                <a id="amzBuyBtn" href="#" target="_blank" rel="noopener noreferrer"
+                    class="w-full py-3 rounded-xl bg-[#FF9900] hover:bg-amber-500 text-slate-900 font-bold text-sm flex items-center justify-center gap-2 transition shadow-md shadow-amber-200">
+                    View on Amazon India
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Flipkart Card -->
+        <div id="flipkartCard" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all">
+            <!-- Platform Header -->
+            <div class="flipkart-header px-5 pt-5 pb-4 flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-[#2874F0] rounded-xl flex items-center justify-center shadow">
+                        <span class="text-white text-xs font-black">F</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-gray-900 text-sm">Flipkart</div>
+                        <div class="text-xs text-gray-400">flipkart.com</div>
+                    </div>
+                </div>
+                <div id="fpkStock" class="flex-shrink-0"><!-- Stock badge --></div>
+            </div>
+
+            <!-- Product Info -->
+            <div class="px-5 pb-5 space-y-4">
+                <div class="flex gap-4 items-start">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <img id="fpkImg" src="" alt="Flipkart Product"
+                            class="max-h-full max-w-full object-contain p-1"
+                            onerror="this.src='https://via.placeholder.com/120x120?text=📱'">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="fpkTitle" class="font-bold text-gray-900 text-sm leading-snug line-clamp-3">
+                            Loading Flipkart listing...
+                        </h3>
+                        <div id="fpkStockMsg" class="text-xs text-gray-400 mt-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- Price Section -->
+                <div id="fpkPriceSection" class="border-t border-gray-100 pt-4">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Rating Row -->
+                <div class="flex items-center justify-between text-xs text-gray-500 border-t border-gray-100 pt-3">
+                    <div id="fpkRating" class="flex items-center gap-1">
+                        <span class="text-amber-400">★</span>—
+                    </div>
+                    <div class="text-xs text-gray-400 flex items-center gap-1">
+                        <svg class="w-3 h-3 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        Flipkart Assured
+                    </div>
+                </div>
+
+                <!-- Buy Button -->
+                <a id="fpkBuyBtn" href="#" target="_blank" rel="noopener noreferrer"
+                    class="w-full py-3 rounded-xl bg-[#2874F0] hover:bg-blue-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition shadow-md shadow-blue-200">
+                    View on Flipkart
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spec Comparison Table -->
+    <div id="specTable" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800 text-sm">Side-by-Side Specification Comparison</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-100 bg-gray-50">
+                        <th class="text-left py-3 px-5 text-xs font-semibold text-gray-400 uppercase tracking-wider w-1/3">Attribute</th>
+                        <th class="text-center py-3 px-5 text-xs font-semibold text-[#FF9900] uppercase tracking-wider w-1/3">
+                            <span class="flex items-center justify-center gap-1">Amazon</span>
+                        </th>
+                        <th class="text-center py-3 px-5 text-xs font-semibold text-[#2874F0] uppercase tracking-wider w-1/3">
+                            <span class="flex items-center justify-center gap-1">Flipkart</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="specTableBody" class="divide-y divide-gray-50"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Analytics & Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- KPI Cards -->
+        <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Comparisons</div>
+                <div id="kpiTotalQueries" class="text-3xl font-black text-gray-900 mt-1">0</div>
+                <div class="text-xs text-gray-400 mt-0.5">Stored in Neon PostgreSQL</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Avg. Savings</div>
+                <div id="kpiAvgSavings" class="text-3xl font-black text-emerald-600 mt-1">₹0</div>
+                <div class="text-xs text-gray-400 mt-0.5">By choosing cheaper platform</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Max Discount Gap</div>
+                <div id="kpiMaxSavings" class="text-3xl font-black text-indigo-600 mt-1">₹0</div>
+                <div class="text-xs text-gray-400 mt-0.5">Peak price difference seen</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">In-Stock Rate</div>
+                <div id="kpiStockRate" class="text-3xl font-black text-teal-600 mt-1">—%</div>
+                <div class="text-xs text-gray-400 mt-0.5">Across all tracked phones</div>
+            </div>
+        </div>
+
+        <!-- Price Chart -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">Price Comparison</h4>
+                    <p class="text-xs text-gray-400">Selling Price vs List Price (MRP)</p>
+                </div>
+            </div>
+            <div class="h-64"><canvas id="priceComparisonChart"></canvas></div>
+        </div>
+
+        <!-- Advantage Doughnut -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <div class="mb-4">
+                <h4 class="font-bold text-gray-800 text-sm">Platform Win Rate</h4>
+                <p class="text-xs text-gray-400">Which store is cheaper more often</p>
+            </div>
+            <div class="h-64 flex items-center justify-center"><canvas id="advantageChart"></canvas></div>
+        </div>
+
+        <!-- History Chart -->
+        <div class="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <div class="mb-4">
+                <h4 class="font-bold text-gray-800 text-sm">Price History Timeline</h4>
+                <p class="text-xs text-gray-400">Historical price tracking across comparison runs</p>
+            </div>
+            <div class="h-56"><canvas id="priceHistoryChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Recent Comparisons Table -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-gray-800 text-sm">Recent Comparison History</h3>
+                <p class="text-xs text-gray-400">Click any row to instantly re-compare • Stored in Neon PostgreSQL</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-100 bg-gray-50 text-[11px] uppercase tracking-wider text-gray-400 font-semibold">
+                        <th class="text-left py-3 px-5">Model</th>
+                        <th class="text-left py-3 px-4">Amazon</th>
+                        <th class="text-left py-3 px-4">Flipkart</th>
+                        <th class="text-left py-3 px-4">Difference</th>
+                        <th class="text-left py-3 px-4">Best Deal</th>
+                        <th class="text-left py-3 px-4">Time</th>
+                    </tr>
+                </thead>
+                <tbody id="recentTableBody" class="divide-y divide-gray-50"></tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<!-- Footer -->
+<footer class="border-t border-gray-200 bg-white mt-10 py-6">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
+        <span class="font-semibold text-gray-500">PriceSnap — Amazon vs Flipkart Price Comparison</span>
+        <span>Built with FastAPI · curl_cffi · Neon PostgreSQL · Chart.js</span>
+    </div>
+</footer>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
