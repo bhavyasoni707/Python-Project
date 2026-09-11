@@ -2,6 +2,11 @@
 Amazon India Smartphone Scraper
 Uses curl_cffi to impersonate real Chrome TLS fingerprints and bypass bot detection.
 Falls back to seed catalog on blocking. NEVER synthesizes fake prices.
+
+Key fix: Search query does NOT append "smartphone" — it causes Amazon to
+return unrelated items (USB drives, cables) that happen to have matching GB numbers.
+Instead, use the exact query. If live scraping returns results that don't match the
+phone query keywords, discard them and use the seed catalog.
 """
 
 import re
@@ -15,6 +20,20 @@ from app.scrapers.fallback_seed import get_fallback_product
 from app.config import USER_AGENTS, SCRAPE_TIMEOUT
 
 
+# Keywords that identify phone-like products
+PHONE_BRANDS = [
+    "apple", "iphone", "samsung", "galaxy", "oneplus", "google", "pixel",
+    "xiaomi", "redmi", "poco", "realme", "motorola", "moto", "vivo", "oppo",
+    "nothing", "iqoo", "asus", "infinix", "tecno", "honor", "nokia"
+]
+
+
+def _is_likely_phone(title: str) -> bool:
+    """Quick check: does this title look like a smartphone, not an accessory/cable?"""
+    t = title.lower()
+    return any(brand in t for brand in PHONE_BRANDS)
+
+
 class AmazonScraper(BaseScraper):
     """Scraper for Amazon.in smartphone search results."""
 
@@ -26,10 +45,10 @@ class AmazonScraper(BaseScraper):
         if not text:
             return None
         cleaned = re.sub(r"[^\d.]", "", text.strip())
-        # Sanity check: valid phone prices are ₹3,000–₹2,00,000
+        # Valid phone prices are ₹5,000–₹2,00,000
         try:
             val = float(cleaned)
-            return val if 3000 <= val <= 200000 else None
+            return val if 5000 <= val <= 200000 else None
         except ValueError:
             return None
 
@@ -46,9 +65,11 @@ class AmazonScraper(BaseScraper):
         return StockStatus.IN_STOCK, "In Stock — FREE delivery available"
 
     def search(self, query: str, force_live: bool = False) -> List[ProductData]:
-        """Search Amazon India. Returns only genuine matches, never fake data."""
+        """Search Amazon India. Returns only genuine phone matches, never fake data."""
         results: List[ProductData] = []
-        encoded = urllib.parse.quote_plus(f"{query} smartphone")
+
+        # Use the query AS-IS — do NOT append "smartphone" (causes USB drives/accessories to appear)
+        encoded = urllib.parse.quote_plus(query)
         search_url = f"{self.base_url}/s?k={encoded}"
 
         headers = {
@@ -66,23 +87,30 @@ class AmazonScraper(BaseScraper):
                 soup = BeautifulSoup(resp.text, "html.parser")
                 cards = soup.select('div[data-component-type="s-search-result"]')
 
-                for card in cards[:8]:
+                for card in cards[:10]:
                     # Try multiple title selectors Amazon uses
                     title = None
                     for title_selector in ["h2 span", "h2 a span", "span.a-size-base-plus", "span.a-size-large"]:
                         title_el = card.select_one(title_selector)
                         if title_el:
                             candidate = title_el.get_text(strip=True)
-                            if len(candidate) > 10:  # Must be a meaningful title
+                            if len(candidate) > 10:
                                 title = candidate
                                 break
                     if not title:
                         continue
 
-                    # Hard-filter accessories
+                    # Hard-filter: must look like a smartphone listing
+                    if not _is_likely_phone(title):
+                        continue
+
                     tl = title.lower()
-                    if any(kw in tl for kw in ["case", "cover", "tempered", "screen protector",
-                                                "cable", "pouch", "charger", "skin", "bumper"]):
+                    # Filter accessories
+                    if any(kw in tl for kw in [
+                        "case", "cover", "tempered", "screen protector", "cable",
+                        "pouch", "charger", "skin", "bumper", "adapter", "earphone",
+                        "headphone", "flash drive", "usb", "memory stick", "pen drive"
+                    ]):
                         continue
 
                     price_el = card.select_one("span.a-price-whole")
@@ -129,7 +157,7 @@ class AmazonScraper(BaseScraper):
                         platform="amazon",
                         title=title,
                         price=price,
-                        mrp=mrp or (round(price * 1.12, 2) if price else None),
+                        mrp=mrp or (round(price * 1.10, 2) if price else None),
                         discount_percent=discount_pct,
                         stock_status=stock_status,
                         stock_message=stock_msg,
@@ -142,7 +170,7 @@ class AmazonScraper(BaseScraper):
         except Exception:
             pass  # Fall through to seed catalog
 
-        # Use seed catalog as fallback (pre-seeded real data, clearly labelled)
+        # Always use seed catalog as fallback if no valid phone results
         if not results:
             fallback = get_fallback_product(query, "amazon")
             if fallback:

@@ -43,9 +43,10 @@ class FlipkartScraper(BaseScraper):
         return StockStatus.IN_STOCK, "In Stock — Flipkart Assured"
 
     def search(self, query: str, force_live: bool = False) -> List[ProductData]:
-        """Search Flipkart. Returns only genuine matches, never fake data."""
+        """Search Flipkart. Returns only genuine phone matches, never fake data."""
         results: List[ProductData] = []
-        encoded = urllib.parse.quote_plus(f"{query} mobile")
+        # Use the exact query — do NOT append 'mobile' (causes unrelated items)
+        encoded = urllib.parse.quote_plus(query)
         search_url = f"{self.base_url}/search?q={encoded}"
 
         headers = {

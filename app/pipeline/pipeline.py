@@ -86,6 +86,24 @@ class ComparisonPipeline:
         matched_amz, matched_fpk, match_score = SmartphoneMatcher.match_best_pair(
             amazon_results, flipkart_results, cleaned_query
         )
+
+        # Stage 3b: Seed Fallback — if live scraping returned garbage that got filtered,
+        # the matcher returns NOT_FOUND. Try the curated seed catalog as a safety net.
+        from app.scrapers.fallback_seed import get_fallback_product as _get_seed
+        from app.scrapers.base import StockStatus as _StockStatus
+
+        if matched_amz is None or matched_amz.stock_status == _StockStatus.NOT_FOUND:
+            _seed_amz = _get_seed(cleaned_query, "amazon")
+            if _seed_amz:
+                matched_amz = _seed_amz
+                match_score = max(match_score, 80.0)
+
+        if matched_fpk is None or matched_fpk.stock_status == _StockStatus.NOT_FOUND:
+            _seed_fpk = _get_seed(cleaned_query, "flipkart")
+            if _seed_fpk:
+                matched_fpk = _seed_fpk
+                match_score = max(match_score, 80.0)
+
         log_stage(
             stage_id=3,
             name="Fuzzy Variant Matching",
