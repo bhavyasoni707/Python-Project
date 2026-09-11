@@ -107,14 +107,16 @@ class ComparisonPipeline:
 
         # --- Stage 5: Database Persistence & History Logging ---
         s5_start = time.time()
+        from app.scrapers.base import StockStatus as _SS
+
         product_id = get_or_create_product(
             name=analysis["canonical_name"],
             storage=storage,
             ram=ram
         )
 
-        # Record Amazon observation
-        if matched_amz:
+        # Record Amazon observation (skip NOT_FOUND sentinels)
+        if matched_amz and matched_amz.stock_status != _SS.NOT_FOUND:
             insert_price_record(
                 product_id=product_id,
                 platform="amazon",
@@ -129,8 +131,8 @@ class ComparisonPipeline:
                 image_url=matched_amz.image_url
             )
 
-        # Record Flipkart observation
-        if matched_fpk:
+        # Record Flipkart observation (skip NOT_FOUND sentinels)
+        if matched_fpk and matched_fpk.stock_status != _SS.NOT_FOUND:
             insert_price_record(
                 product_id=product_id,
                 platform="flipkart",
@@ -165,7 +167,7 @@ class ComparisonPipeline:
             stage_id=5,
             name="Database Persistence",
             status="SUCCESS",
-            details=f"Saved price snapshots and comparison log into SQLite (Product ID: {product_id})",
+            details=f"Saved price snapshots and comparison log into Neon PostgreSQL (Product ID: {product_id})",
             duration_ms=(time.time() - s5_start) * 1000
         )
 

@@ -1,208 +1,292 @@
 /**
- * Chart.js Visualization Managers
+ * PriceSnap — Chart Renderers
+ * Dark-themed charts using Chart.js 4
  */
 
-let comparisonChartInstance = null;
-let historyChartInstance = null;
-let advantageChartInstance = null;
+// Dark theme defaults applied globally
+Chart.defaults.color = '#8b8fa8';
+Chart.defaults.borderColor = '#22252f';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
-const Charts = {
-    // 1. Bar Chart: Selling Price vs MRP comparison
-    renderPriceComparisonChart(canvasId, data) {
-        const ctx = document.getElementById(canvasId);
-        if (!ctx) return;
+const Charts = (() => {
+    let priceCompChart = null;
+    let advantageChart = null;
+    let historyChart = null;
 
-        if (comparisonChartInstance) {
-            comparisonChartInstance.destroy();
+    // ----------------------------------------------------------------
+    // Price Comparison Bar Chart (Selling Price vs MRP)
+    // ----------------------------------------------------------------
+    function renderPriceComparisonChart(canvasId, data) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        const amz = data.amazon;
+        const fpk = data.flipkart;
+
+        const labels = [];
+        const priceData = [];
+        const mrpData = [];
+        const bgColors = [];
+        const mrpColors = [];
+
+        if (amz && amz.price) {
+            labels.push('Amazon India');
+            priceData.push(amz.price);
+            mrpData.push(amz.mrp || amz.price);
+            bgColors.push('rgba(255,153,0,0.85)');
+            mrpColors.push('rgba(255,153,0,0.25)');
         }
 
-        const amzPrice = data.amazon?.price || 0;
-        const amzMrp = data.amazon?.mrp || amzPrice;
-        const fpkPrice = data.flipkart?.price || 0;
-        const fpkMrp = data.flipkart?.mrp || fpkPrice;
+        if (fpk && fpk.price) {
+            labels.push('Flipkart');
+            priceData.push(fpk.price);
+            mrpData.push(fpk.mrp || fpk.price);
+            bgColors.push('rgba(40,116,240,0.85)');
+            mrpColors.push('rgba(40,116,240,0.25)');
+        }
 
-        comparisonChartInstance = new Chart(ctx, {
+        if (priceCompChart) priceCompChart.destroy();
+
+        if (labels.length === 0) {
+            priceCompChart = null;
+            return;
+        }
+
+        priceCompChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Amazon India', 'Flipkart'],
+                labels,
                 datasets: [
                     {
-                        label: 'Selling Price (₹)',
-                        data: [amzPrice, fpkPrice],
-                        backgroundColor: ['#f59e0b', '#3b82f6'],
+                        label: 'Selling Price',
+                        data: priceData,
+                        backgroundColor: bgColors,
                         borderRadius: 8,
-                        barThickness: 45
+                        borderSkipped: false,
+                        barPercentage: 0.55,
                     },
                     {
-                        label: 'MRP List Price (₹)',
-                        data: [amzMrp, fpkMrp],
-                        backgroundColor: ['rgba(245, 158, 11, 0.25)', 'rgba(59, 130, 246, 0.25)'],
-                        borderColor: ['#f59e0b', '#3b82f6'],
-                        borderWidth: 1,
+                        label: 'MRP',
+                        data: mrpData,
+                        backgroundColor: mrpColors,
                         borderRadius: 8,
-                        barThickness: 45
+                        borderSkipped: false,
+                        barPercentage: 0.55,
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans' } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ₹${context.raw.toLocaleString('en-IN')}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', weight: 'bold' } },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                    },
-                    y: {
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: value => '₹' + (value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value)
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                    }
-                }
-            }
-        });
-    },
-
-    // 2. Line Chart: Price History Timeline
-    renderPriceHistoryChart(canvasId, historyData) {
-        const ctx = document.getElementById(canvasId);
-        if (!ctx) return;
-
-        if (historyChartInstance) {
-            historyChartInstance.destroy();
-        }
-
-        if (!historyData || historyData.length === 0) {
-            // Render placeholder empty state
-            historyData = [
-                { platform: 'amazon', price: 69999, recorded_at: 'Day 1' },
-                { platform: 'flipkart', price: 68999, recorded_at: 'Day 1' },
-                { platform: 'amazon', price: 67999, recorded_at: 'Day 2' },
-                { platform: 'flipkart', price: 65999, recorded_at: 'Day 2' },
-            ];
-        }
-
-        // Group points by platform
-        const amzPoints = historyData.filter(h => h.platform === 'amazon');
-        const fpkPoints = historyData.filter(h => h.platform === 'flipkart');
-
-        const labels = historyData.map((h, i) => {
-            const date = new Date(h.recorded_at);
-            return isNaN(date.getTime()) ? `Point ${i + 1}` : date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        });
-
-        // Deduplicate labels while preserving order
-        const uniqueLabels = [...new Set(labels)].slice(-8);
-
-        historyChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: uniqueLabels.length > 0 ? uniqueLabels : ['Check 1', 'Check 2', 'Current'],
-                datasets: [
-                    {
-                        label: 'Amazon Price',
-                        data: amzPoints.map(p => p.price).slice(-8),
-                        borderColor: '#ff9900',
-                        backgroundColor: 'rgba(255, 153, 0, 0.1)',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    },
-                    {
-                        label: 'Flipkart Price',
-                        data: fpkPoints.map(p => p.price).slice(-8),
-                        borderColor: '#2874f0',
-                        backgroundColor: 'rgba(40, 116, 240, 0.1)',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 5,
-                        pointHoverRadius: 7
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans' } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ₹${Number(context.raw || 0).toLocaleString('en-IN')}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#94a3b8', font: { size: 10 } },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                    },
-                    y: {
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: value => '₹' + (value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value)
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                    }
-                }
-            }
-        });
-    },
-
-    // 3. Doughnut Chart: Platform Advantage / Win Rate
-    renderAdvantageChart(canvasId, cheaperCounts) {
-        const ctx = document.getElementById(canvasId);
-        if (!ctx) return;
-
-        if (advantageChartInstance) {
-            advantageChartInstance.destroy();
-        }
-
-        const amazonWins = cheaperCounts?.amazon || 1;
-        const flipkartWins = cheaperCounts?.flipkart || 2;
-        const equalWins = cheaperCounts?.equal || 0;
-
-        advantageChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Flipkart Cheaper', 'Amazon Cheaper', 'Equal Price'],
-                datasets: [
-                    {
-                        data: [flipkartWins, amazonWins, equalWins],
-                        backgroundColor: ['#2874f0', '#ff9900', '#10b981'],
-                        borderWidth: 2,
-                        borderColor: '#111827'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { color: '#94a3b8', padding: 15, font: { family: 'Plus Jakarta Sans', size: 11 } }
+                        labels: {
+                            padding: 16,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1c1f28',
+                        borderColor: '#22252f',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: ctx => ` ₹${Number(ctx.raw).toLocaleString('en-IN')}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 12, weight: '600' } }
+                    },
+                    y: {
+                        grid: { color: '#22252f' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: v => '₹' + Number(v).toLocaleString('en-IN')
+                        }
                     }
                 }
             }
         });
     }
-};
+
+    // ----------------------------------------------------------------
+    // Platform Win Rate Doughnut
+    // ----------------------------------------------------------------
+    function renderAdvantageChart(canvasId, counts) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        const amzCount = counts?.amazon || 0;
+        const fpkCount = counts?.flipkart || 0;
+        const eqCount = counts?.equal || 0;
+        const total = amzCount + fpkCount + eqCount;
+
+        if (advantageChart) advantageChart.destroy();
+
+        if (total === 0) {
+            advantageChart = null;
+            // Draw empty state text
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#4a4f66';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('No data yet', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
+        advantageChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Amazon', 'Flipkart', 'Equal'],
+                datasets: [{
+                    data: [amzCount, fpkCount, eqCount],
+                    backgroundColor: [
+                        'rgba(255,153,0,0.85)',
+                        'rgba(40,116,240,0.85)',
+                        'rgba(34,197,94,0.7)',
+                    ],
+                    borderColor: '#16181f',
+                    borderWidth: 3,
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 14,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1c1f28',
+                        borderColor: '#22252f',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${ctx.raw} searches (${Math.round((ctx.raw / total) * 100)}%)`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ----------------------------------------------------------------
+    // Price History Line Chart
+    // ----------------------------------------------------------------
+    function renderPriceHistoryChart(canvasId, history) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        if (historyChart) historyChart.destroy();
+
+        if (!history || history.length === 0) {
+            historyChart = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#4a4f66';
+            ctx.font = '13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('No price history yet for this product', canvas.width / 2, canvas.height / 2);
+            return;
+        }
+
+        const amzPoints = history.filter(h => h.platform === 'amazon' && h.price);
+        const fpkPoints = history.filter(h => h.platform === 'flipkart' && h.price);
+
+        const allTimes = [...new Set(history.map(h => h.recorded_at))].sort();
+
+        const amzMap = Object.fromEntries(amzPoints.map(h => [h.recorded_at, h.price]));
+        const fpkMap = Object.fromEntries(fpkPoints.map(h => [h.recorded_at, h.price]));
+
+        const shortLabels = allTimes.map(t => {
+            const d = new Date(t);
+            return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        });
+
+        historyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: shortLabels,
+                datasets: [
+                    {
+                        label: 'Amazon India',
+                        data: allTimes.map(t => amzMap[t] ?? null),
+                        borderColor: '#FF9900',
+                        backgroundColor: 'rgba(255,153,0,0.08)',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#FF9900',
+                        fill: true,
+                        tension: 0.35,
+                        spanGaps: true,
+                    },
+                    {
+                        label: 'Flipkart',
+                        data: allTimes.map(t => fpkMap[t] ?? null),
+                        borderColor: '#2874F0',
+                        backgroundColor: 'rgba(40,116,240,0.08)',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#2874F0',
+                        fill: true,
+                        tension: 0.35,
+                        spanGaps: true,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 16,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1c1f28',
+                        borderColor: '#22252f',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ₹${Number(ctx.raw).toLocaleString('en-IN')}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, maxRotation: 0 }
+                    },
+                    y: {
+                        grid: { color: '#22252f' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: v => '₹' + Number(v).toLocaleString('en-IN')
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    return { renderPriceComparisonChart, renderAdvantageChart, renderPriceHistoryChart };
+})();

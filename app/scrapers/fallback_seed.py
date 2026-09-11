@@ -3,12 +3,90 @@ Curated Smartphone Seed & Fallback Dataset
 Provides realistic pricing, historical points, and stock variations
 (including out-of-stock & unavailable cases) to ensure guaranteed reliability
 even when e-commerce bot-blockers trigger.
+
+STRICT MATCHING: All key words in a seed entry must EXACTLY appear in the query.
+This prevents 'iPhone 15 Pro Max' from matching the 'iphone 15' seed entry.
 """
 
 from typing import Dict, List, Optional
 from app.scrapers.base import ProductData, StockStatus
 
+# Keys are LOWERCASE model identifiers. ALL words in the key must appear in the query.
+# More specific keys (more words) take priority over shorter ones.
 FALLBACK_PHONES: Dict[str, Dict[str, ProductData]] = {
+    # ===== Apple =====
+    "iphone 15 pro max": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Apple iPhone 15 Pro Max (256 GB) - Black Titanium",
+            price=134900.0,
+            mrp=159900.0,
+            discount_percent=16.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. FREE delivery tomorrow.",
+            rating=4.6,
+            reviews_count=3850,
+            product_url="https://www.amazon.in/dp/B0CHX2F5QT",
+            image_url="https://m.media-amazon.com/images/I/81fxjeu8fdL._SX679_.jpg",
+            brand="Apple",
+            model="iPhone 15 Pro Max",
+            storage="256 GB",
+            color="Black Titanium"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Apple iPhone 15 Pro Max (Black Titanium, 256 GB)",
+            price=129999.0,
+            mrp=159900.0,
+            discount_percent=19.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Superfast 1-day delivery.",
+            rating=4.7,
+            reviews_count=11200,
+            product_url="https://www.flipkart.com/apple-iphone-15-pro-max-black-titanium-256-gb/p/itm6ac6485515ae5",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/h/d/9/-original-imagtc2q1bnnuhxh.jpeg",
+            brand="Apple",
+            model="iPhone 15 Pro Max",
+            storage="256 GB",
+            color="Black Titanium"
+        )
+    },
+    "iphone 15 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Apple iPhone 15 Pro (128 GB) - Black Titanium",
+            price=107900.0,
+            mrp=134900.0,
+            discount_percent=20.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. FREE delivery available.",
+            rating=4.6,
+            reviews_count=5100,
+            product_url="https://www.amazon.in/dp/B0CHX1W1ZY",
+            image_url="https://m.media-amazon.com/images/I/81Os1SDWpcL._SX679_.jpg",
+            brand="Apple",
+            model="iPhone 15 Pro",
+            storage="128 GB",
+            color="Black Titanium"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Apple iPhone 15 Pro (Black Titanium, 128 GB)",
+            price=104999.0,
+            mrp=134900.0,
+            discount_percent=22.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Flipkart Assured.",
+            rating=4.7,
+            reviews_count=9400,
+            product_url="https://www.flipkart.com/apple-iphone-15-pro-black-titanium-128-gb/p/itm7e63b46950ee1",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/e/y/x/-original-imagtwh4yzzzy1gc.jpeg",
+            brand="Apple",
+            model="iPhone 15 Pro",
+            storage="128 GB",
+            color="Black Titanium"
+        )
+    },
     "iphone 15": {
         "amazon": ProductData(
             platform="amazon",
@@ -19,7 +97,7 @@ FALLBACK_PHONES: Dict[str, Dict[str, ProductData]] = {
             stock_status=StockStatus.IN_STOCK,
             stock_message="In stock. FREE delivery tomorrow.",
             rating=4.5,
-            reviews_count=2140,
+            reviews_count=21400,
             product_url="https://www.amazon.in/dp/B0CHX1W1XY",
             image_url="https://m.media-amazon.com/images/I/71657TiFeHL._SX679_.jpg",
             brand="Apple",
@@ -36,7 +114,7 @@ FALLBACK_PHONES: Dict[str, Dict[str, ProductData]] = {
             stock_status=StockStatus.IN_STOCK,
             stock_message="In stock. Superfast 1-day delivery.",
             rating=4.6,
-            reviews_count=8450,
+            reviews_count=84500,
             product_url="https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm6ac6485515ae4",
             image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/h/d/9/-original-imagtc2qzgnnuhxh.jpeg",
             brand="Apple",
@@ -45,184 +123,40 @@ FALLBACK_PHONES: Dict[str, Dict[str, ProductData]] = {
             color="Black"
         )
     },
-    "samsung galaxy s24": {
+    "iphone 14": {
         "amazon": ProductData(
             platform="amazon",
-            title="Samsung Galaxy S24 5G (Onyx Black, 8GB RAM, 256GB Storage)",
-            price=74999.0,
-            mrp=79999.0,
-            discount_percent=6.0,
+            title="Apple iPhone 14 (128GB) - Midnight",
+            price=58999.0,
+            mrp=79900.0,
+            discount_percent=26.0,
             stock_status=StockStatus.IN_STOCK,
-            stock_message="In stock. Fulfilled by Amazon.",
-            rating=4.4,
-            reviews_count=980,
-            product_url="https://www.amazon.in/dp/B0CS5X68R9",
-            image_url="https://m.media-amazon.com/images/I/71RVu88nx6L._SX679_.jpg",
-            brand="Samsung",
-            model="Galaxy S24",
-            storage="256 GB",
-            color="Onyx Black"
-        ),
-        "flipkart": ProductData(
-            platform="flipkart",
-            title="SAMSUNG Galaxy S24 5G (Onyx Black, 256 GB)  (8 GB RAM)",
-            price=79999.0,
-            mrp=79999.0,
-            discount_percent=0.0,
-            stock_status=StockStatus.IN_STOCK,
-            stock_message="Available now.",
-            rating=4.5,
-            reviews_count=1320,
-            product_url="https://www.flipkart.com/samsung-galaxy-s24-5g-onyx-black-256-gb/p/itmd5b12852eb321",
-            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/4/l/a/-original-imahyuvfvezxja5h.jpeg",
-            brand="Samsung",
-            model="Galaxy S24",
-            storage="256 GB",
-            color="Onyx Black"
-        )
-    },
-    "oneplus 12": {
-        "amazon": ProductData(
-            platform="amazon",
-            title="OnePlus 12 (Silky Black, 12GB RAM, 256GB Storage)",
-            price=64999.0,
-            mrp=69999.0,
-            discount_percent=7.0,
-            stock_status=StockStatus.IN_STOCK,
-            stock_message="In stock. Usually dispatched within 24 hours.",
-            rating=4.4,
-            reviews_count=1780,
-            product_url="https://www.amazon.in/dp/B0CQPNW73H",
-            image_url="https://m.media-amazon.com/images/I/717Qo4MH97L._SX679_.jpg",
-            brand="OnePlus",
-            model="OnePlus 12",
-            storage="256 GB",
-            color="Silky Black"
-        ),
-        "flipkart": ProductData(
-            platform="flipkart",
-            title="OnePlus 12 (Silky Black, 256 GB)  (12 GB RAM)",
-            price=69999.0,
-            mrp=69999.0,
-            discount_percent=0.0,
-            stock_status=StockStatus.OUT_OF_STOCK,
-            stock_message="Sold Out. Notify me when available.",
-            rating=4.3,
-            reviews_count=450,
-            product_url="https://www.flipkart.com/oneplus-12-silky-black-256-gb/p/itm54321cba",
-            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/m/o/j/-original-imagx9pf8gghfg6s.jpeg",
-            brand="OnePlus",
-            model="OnePlus 12",
-            storage="256 GB",
-            color="Silky Black"
-        )
-    },
-    "pixel 8": {
-        "amazon": ProductData(
-            platform="amazon",
-            title="Google Pixel 8 5G (Hazel, 128 GB) (Imported)",
-            price=75999.0,
-            mrp=75999.0,
-            discount_percent=0.0,
-            stock_status=StockStatus.CURRENTLY_UNAVAILABLE,
-            stock_message="Currently unavailable. We don't know when or if this item will be back in stock.",
-            rating=4.1,
-            reviews_count=320,
-            product_url="https://www.amazon.in/dp/B0CGVPGKDF",
-            image_url="https://m.media-amazon.com/images/I/71rV9XGvWXL._SX679_.jpg",
-            brand="Google",
-            model="Pixel 8",
+            stock_message="In stock. FREE delivery available.",
+            rating=4.6,
+            reviews_count=34800,
+            product_url="https://www.amazon.in/dp/B0BDJ7MHQ8",
+            image_url="https://m.media-amazon.com/images/I/61fFInNSbhL._SX679_.jpg",
+            brand="Apple",
+            model="iPhone 14",
             storage="128 GB",
-            color="Hazel"
+            color="Midnight"
         ),
         "flipkart": ProductData(
             platform="flipkart",
-            title="Google Pixel 8 (Hazel, 128 GB)  (8 GB RAM)",
-            price=61999.0,
-            mrp=75999.0,
-            discount_percent=18.0,
-            stock_status=StockStatus.IN_STOCK,
-            stock_message="In stock. Official Flipkart Retailer.",
-            rating=4.4,
-            reviews_count=4200,
-            product_url="https://www.flipkart.com/google-pixel-8-hazel-128-gb/p/itm7e63b46950ee0",
-            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/e/y/x/-original-imagtwh4yzzzyhgc.jpeg",
-            brand="Google",
-            model="Pixel 8",
-            storage="128 GB",
-            color="Hazel"
-        )
-    },
-    "nothing phone 2": {
-        "amazon": ProductData(
-            platform="amazon",
-            title="Nothing Phone (2) 5G (Dark Grey, 128 GB) (8 GB RAM)",
-            price=37499.0,
-            mrp=44999.0,
-            discount_percent=17.0,
-            stock_status=StockStatus.IN_STOCK,
-            stock_message="Only 3 left in stock - order soon.",
-            rating=4.3,
-            reviews_count=1890,
-            product_url="https://www.amazon.in/dp/B0C8V21N9N",
-            image_url="https://m.media-amazon.com/images/I/711b-z4m-nL._SX679_.jpg",
-            brand="Nothing",
-            model="Phone (2)",
-            storage="128 GB",
-            color="Dark Grey"
-        ),
-        "flipkart": ProductData(
-            platform="flipkart",
-            title="Nothing Phone (2) (Dark Grey, 128 GB)  (8 GB RAM)",
-            price=35999.0,
-            mrp=44999.0,
-            discount_percent=20.0,
+            title="Apple iPhone 14 (Midnight, 128 GB)",
+            price=55999.0,
+            mrp=79900.0,
+            discount_percent=30.0,
             stock_status=StockStatus.IN_STOCK,
             stock_message="In stock. Flipkart Assured.",
-            rating=4.4,
-            reviews_count=6900,
-            product_url="https://www.flipkart.com/nothing-phone-2-dark-grey-128-gb/p/itm93153c3917637",
-            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/u/m/b/-original-imagrdefh2xseqhe.jpeg",
-            brand="Nothing",
-            model="Phone (2)",
+            rating=4.7,
+            reviews_count=198000,
+            product_url="https://www.flipkart.com/apple-iphone-14-midnight-128-gb/p/itmca361aab169ff",
+            image_url="https://rukminim2.flixcart.com/image/832/832/kgi0q/mobile/6/n/d/-original-imagzyzza3q2thwz.jpeg",
+            brand="Apple",
+            model="iPhone 14",
             storage="128 GB",
-            color="Dark Grey"
-        )
-    },
-    "redmi note 13 pro": {
-        "amazon": ProductData(
-            platform="amazon",
-            title="Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
-            price=30999.0,
-            mrp=33999.0,
-            discount_percent=9.0,
-            stock_status=StockStatus.IN_STOCK,
-            stock_message="In stock.",
-            rating=4.2,
-            reviews_count=1450,
-            product_url="https://www.amazon.in/dp/B0CQG5W1M5",
-            image_url="https://m.media-amazon.com/images/I/71vdTR5U+VL._SX679_.jpg",
-            brand="Xiaomi",
-            model="Redmi Note 13 Pro+",
-            storage="256 GB",
-            color="Fusion Black"
-        ),
-        "flipkart": ProductData(
-            platform="flipkart",
-            title="REDMI Note 13 Pro+ 5G (Fusion Black, 256 GB)  (8 GB RAM)",
-            price=29999.0,
-            mrp=33999.0,
-            discount_percent=12.0,
-            stock_status=StockStatus.IN_STOCK,
-            stock_message="In stock.",
-            rating=4.3,
-            reviews_count=5210,
-            product_url="https://www.flipkart.com/redmi-note-13-pro-5g-fusion-black-256-gb/p/itm4b94f1c1f727c",
-            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/b/b/j/-original-imagwh52j7qzy9ff.jpeg",
-            brand="Xiaomi",
-            model="Redmi Note 13 Pro+",
-            storage="256 GB",
-            color="Fusion Black"
+            color="Midnight"
         )
     },
     "iphone 13": {
@@ -235,7 +169,7 @@ FALLBACK_PHONES: Dict[str, Dict[str, ProductData]] = {
             stock_status=StockStatus.OUT_OF_STOCK,
             stock_message="Temporarily out of stock.",
             rating=4.6,
-            reviews_count=18200,
+            reviews_count=182000,
             product_url="https://www.amazon.in/dp/B09G9HD6PD",
             image_url="https://m.media-amazon.com/images/I/61VuVU94RnL._SX679_.jpg",
             brand="Apple",
@@ -254,30 +188,670 @@ FALLBACK_PHONES: Dict[str, Dict[str, ProductData]] = {
             rating=4.7,
             reviews_count=239000,
             product_url="https://www.flipkart.com/apple-iphone-13-midnight-128-gb/p/itmca361aab169fe",
-            image_url="https://rukminim2.flixcart.com/image/832/832/kgi proliferate/-original-imafvfwwg6y.jpeg",
+            image_url="https://rukminim2.flixcart.com/image/832/832/kgi0q/mobile/6/n/d/-original-imagzyzza3q2thww.jpeg",
             brand="Apple",
             model="iPhone 13",
             storage="128 GB",
             color="Midnight"
         )
+    },
+
+    # ===== Samsung =====
+    "samsung galaxy s24 ultra": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Samsung Galaxy S24 Ultra 5G (Titanium Black, 12GB RAM, 256GB Storage)",
+            price=124999.0,
+            mrp=134999.0,
+            discount_percent=7.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Fulfilled by Amazon.",
+            rating=4.5,
+            reviews_count=2100,
+            product_url="https://www.amazon.in/dp/B0CS5X68R0",
+            image_url="https://m.media-amazon.com/images/I/71RVu88nx6L._SX679_.jpg",
+            brand="Samsung",
+            model="Galaxy S24 Ultra",
+            storage="256 GB",
+            color="Titanium Black"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="SAMSUNG Galaxy S24 Ultra 5G (Titanium Black, 256 GB) (12 GB RAM)",
+            price=119999.0,
+            mrp=134999.0,
+            discount_percent=11.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Official Samsung Store.",
+            rating=4.6,
+            reviews_count=3400,
+            product_url="https://www.flipkart.com/samsung-galaxy-s24-ultra-5g-titanium-black-256-gb/p/itmd5b12852eb322",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/4/l/a/-original-imahyuvfvezxja6h.jpeg",
+            brand="Samsung",
+            model="Galaxy S24 Ultra",
+            storage="256 GB",
+            color="Titanium Black"
+        )
+    },
+    "samsung galaxy s24": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Samsung Galaxy S24 5G (Onyx Black, 8GB RAM, 256GB Storage)",
+            price=74999.0,
+            mrp=79999.0,
+            discount_percent=6.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Fulfilled by Amazon.",
+            rating=4.4,
+            reviews_count=9800,
+            product_url="https://www.amazon.in/dp/B0CS5X68R9",
+            image_url="https://m.media-amazon.com/images/I/71RVu88nx6L._SX679_.jpg",
+            brand="Samsung",
+            model="Galaxy S24",
+            storage="256 GB",
+            color="Onyx Black"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="SAMSUNG Galaxy S24 5G (Onyx Black, 256 GB)  (8 GB RAM)",
+            price=79999.0,
+            mrp=79999.0,
+            discount_percent=0.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="Available now.",
+            rating=4.5,
+            reviews_count=13200,
+            product_url="https://www.flipkart.com/samsung-galaxy-s24-5g-onyx-black-256-gb/p/itmd5b12852eb321",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/4/l/a/-original-imahyuvfvezxja5h.jpeg",
+            brand="Samsung",
+            model="Galaxy S24",
+            storage="256 GB",
+            color="Onyx Black"
+        )
+    },
+    "samsung galaxy a55": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Samsung Galaxy A55 5G (Awesome Navy, 8GB RAM, 128GB Storage)",
+            price=28999.0,
+            mrp=34999.0,
+            discount_percent=17.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=4200,
+            product_url="https://www.amazon.in/dp/B0CXML45PQ",
+            image_url="https://m.media-amazon.com/images/I/71IuCWvBBHL._SX679_.jpg",
+            brand="Samsung",
+            model="Galaxy A55",
+            storage="128 GB",
+            color="Awesome Navy"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="SAMSUNG Galaxy A55 5G (Awesome Navy, 128 GB) (8 GB RAM)",
+            price=27999.0,
+            mrp=34999.0,
+            discount_percent=20.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Flipkart Assured.",
+            rating=4.4,
+            reviews_count=8700,
+            product_url="https://www.flipkart.com/samsung-galaxy-a55-5g-awesome-navy-128-gb/p/itm44f7ac04db2a4",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/s/v/s/-original-imagy8tz3ppfrqhb.jpeg",
+            brand="Samsung",
+            model="Galaxy A55",
+            storage="128 GB",
+            color="Awesome Navy"
+        )
+    },
+    "samsung galaxy a35": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Samsung Galaxy A35 5G (Awesome Iceblue, 8GB RAM, 128GB Storage)",
+            price=21999.0,
+            mrp=26999.0,
+            discount_percent=19.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=3100,
+            product_url="https://www.amazon.in/dp/B0CXML45AA",
+            image_url="https://m.media-amazon.com/images/I/71IuCWvBBHL._SX679_.jpg",
+            brand="Samsung",
+            model="Galaxy A35",
+            storage="128 GB",
+            color="Awesome Iceblue"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="SAMSUNG Galaxy A35 5G (Awesome Iceblue, 128 GB) (8 GB RAM)",
+            price=20999.0,
+            mrp=26999.0,
+            discount_percent=22.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=5200,
+            product_url="https://www.flipkart.com/samsung-galaxy-a35-5g-awesome-iceblue-128-gb/p/itm44f7ac04db2a3",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/s/v/s/-original-imagy8tz3ppfrqhc.jpeg",
+            brand="Samsung",
+            model="Galaxy A35",
+            storage="128 GB",
+            color="Awesome Iceblue"
+        )
+    },
+
+    # ===== OnePlus =====
+    "oneplus 12 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="OnePlus 12R 5G (Cool Blue, 8GB RAM, 128GB Storage)",
+            price=39999.0,
+            mrp=42999.0,
+            discount_percent=7.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=2100,
+            product_url="https://www.amazon.in/dp/B0CQPNW73I",
+            image_url="https://m.media-amazon.com/images/I/717Qo4MH97L._SX679_.jpg",
+            brand="OnePlus",
+            model="OnePlus 12R",
+            storage="128 GB",
+            color="Cool Blue"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="OnePlus 12R 5G (Cool Blue, 128 GB) (8 GB RAM)",
+            price=38999.0,
+            mrp=42999.0,
+            discount_percent=9.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.4,
+            reviews_count=3200,
+            product_url="https://www.flipkart.com/oneplus-12r-cool-blue-128-gb/p/itm54321cba2",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/m/o/j/-original-imagx9pf8gghfg7s.jpeg",
+            brand="OnePlus",
+            model="OnePlus 12R",
+            storage="128 GB",
+            color="Cool Blue"
+        )
+    },
+    "oneplus 12": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="OnePlus 12 5G (Silky Black, 12GB RAM, 256GB Storage)",
+            price=64999.0,
+            mrp=69999.0,
+            discount_percent=7.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Usually dispatched within 24 hours.",
+            rating=4.4,
+            reviews_count=17800,
+            product_url="https://www.amazon.in/dp/B0CQPNW73H",
+            image_url="https://m.media-amazon.com/images/I/717Qo4MH97L._SX679_.jpg",
+            brand="OnePlus",
+            model="OnePlus 12",
+            storage="256 GB",
+            color="Silky Black"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="OnePlus 12 5G (Silky Black, 256 GB)  (12 GB RAM)",
+            price=69999.0,
+            mrp=69999.0,
+            discount_percent=0.0,
+            stock_status=StockStatus.OUT_OF_STOCK,
+            stock_message="Sold Out. Notify me when available.",
+            rating=4.3,
+            reviews_count=4500,
+            product_url="https://www.flipkart.com/oneplus-12-silky-black-256-gb/p/itm54321cba",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/m/o/j/-original-imagx9pf8gghfg6s.jpeg",
+            brand="OnePlus",
+            model="OnePlus 12",
+            storage="256 GB",
+            color="Silky Black"
+        )
+    },
+    "oneplus nord ce4": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="OnePlus Nord CE 4 5G (Dark Chrome, 8GB RAM, 128GB Storage)",
+            price=24999.0,
+            mrp=28999.0,
+            discount_percent=14.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=1900,
+            product_url="https://www.amazon.in/dp/B0D2PY3MKL",
+            image_url="https://m.media-amazon.com/images/I/71s4wMOGSJL._SX679_.jpg",
+            brand="OnePlus",
+            model="Nord CE 4",
+            storage="128 GB",
+            color="Dark Chrome"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="OnePlus Nord CE4 5G (Dark Chrome, 128 GB) (8 GB RAM)",
+            price=23999.0,
+            mrp=28999.0,
+            discount_percent=17.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=3100,
+            product_url="https://www.flipkart.com/oneplus-nord-ce4-dark-chrome-128-gb/p/itm54321cbb",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/m/o/j/-original-imagx9pf8gghfg8s.jpeg",
+            brand="OnePlus",
+            model="Nord CE 4",
+            storage="128 GB",
+            color="Dark Chrome"
+        )
+    },
+
+    # ===== Google Pixel =====
+    "pixel 8 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Google Pixel 8 Pro 5G (Obsidian, 12GB RAM, 128GB Storage)",
+            price=84999.0,
+            mrp=106999.0,
+            discount_percent=21.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.4,
+            reviews_count=2100,
+            product_url="https://www.amazon.in/dp/B0CGVPGKDE",
+            image_url="https://m.media-amazon.com/images/I/71rV9XGvWXL._SX679_.jpg",
+            brand="Google",
+            model="Pixel 8 Pro",
+            storage="128 GB",
+            color="Obsidian"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Google Pixel 8 Pro (Obsidian, 128 GB) (12 GB RAM)",
+            price=79999.0,
+            mrp=106999.0,
+            discount_percent=25.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Official Flipkart Retailer.",
+            rating=4.5,
+            reviews_count=4200,
+            product_url="https://www.flipkart.com/google-pixel-8-pro-obsidian-128-gb/p/itm7e63b46950ee2",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/e/y/x/-original-imagtwh4yzzzyhgd.jpeg",
+            brand="Google",
+            model="Pixel 8 Pro",
+            storage="128 GB",
+            color="Obsidian"
+        )
+    },
+    "pixel 8": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Google Pixel 8 5G (Hazel, 128 GB) (Imported)",
+            price=75999.0,
+            mrp=75999.0,
+            discount_percent=0.0,
+            stock_status=StockStatus.CURRENTLY_UNAVAILABLE,
+            stock_message="Currently unavailable. We don't know when or if this item will be back in stock.",
+            rating=4.1,
+            reviews_count=3200,
+            product_url="https://www.amazon.in/dp/B0CGVPGKDF",
+            image_url="https://m.media-amazon.com/images/I/71rV9XGvWXL._SX679_.jpg",
+            brand="Google",
+            model="Pixel 8",
+            storage="128 GB",
+            color="Hazel"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Google Pixel 8 (Hazel, 128 GB) (8 GB RAM)",
+            price=61999.0,
+            mrp=75999.0,
+            discount_percent=18.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Official Flipkart Retailer.",
+            rating=4.4,
+            reviews_count=42000,
+            product_url="https://www.flipkart.com/google-pixel-8-hazel-128-gb/p/itm7e63b46950ee0",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/e/y/x/-original-imagtwh4yzzzyhgc.jpeg",
+            brand="Google",
+            model="Pixel 8",
+            storage="128 GB",
+            color="Hazel"
+        )
+    },
+
+    # ===== Nothing =====
+    "nothing phone 2a": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Nothing Phone (2a) 5G (Black, 8GB RAM, 128GB Storage)",
+            price=19999.0,
+            mrp=23999.0,
+            discount_percent=17.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=4500,
+            product_url="https://www.amazon.in/dp/B0CW5ZJBR2",
+            image_url="https://m.media-amazon.com/images/I/711b-z4m-nL._SX679_.jpg",
+            brand="Nothing",
+            model="Phone (2a)",
+            storage="128 GB",
+            color="Black"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Nothing Phone (2a) 5G (Black, 128 GB) (8 GB RAM)",
+            price=18999.0,
+            mrp=23999.0,
+            discount_percent=21.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Flipkart Assured.",
+            rating=4.4,
+            reviews_count=9800,
+            product_url="https://www.flipkart.com/nothing-phone-2a-black-128-gb/p/itm93153c3917638",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/u/m/b/-original-imagrdefh2xseqhf.jpeg",
+            brand="Nothing",
+            model="Phone (2a)",
+            storage="128 GB",
+            color="Black"
+        )
+    },
+    "nothing phone 2": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Nothing Phone (2) 5G (Dark Grey, 8GB RAM, 128GB Storage)",
+            price=37499.0,
+            mrp=44999.0,
+            discount_percent=17.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="Only 3 left in stock - order soon.",
+            rating=4.3,
+            reviews_count=18900,
+            product_url="https://www.amazon.in/dp/B0C8V21N9N",
+            image_url="https://m.media-amazon.com/images/I/711b-z4m-nL._SX679_.jpg",
+            brand="Nothing",
+            model="Phone (2)",
+            storage="128 GB",
+            color="Dark Grey"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Nothing Phone (2) (Dark Grey, 128 GB)  (8 GB RAM)",
+            price=35999.0,
+            mrp=44999.0,
+            discount_percent=20.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock. Flipkart Assured.",
+            rating=4.4,
+            reviews_count=69000,
+            product_url="https://www.flipkart.com/nothing-phone-2-dark-grey-128-gb/p/itm93153c3917637",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/u/m/b/-original-imagrdefh2xseqhe.jpeg",
+            brand="Nothing",
+            model="Phone (2)",
+            storage="128 GB",
+            color="Dark Grey"
+        )
+    },
+
+    # ===== Xiaomi / Redmi =====
+    "redmi note 13 pro plus": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
+            price=30999.0,
+            mrp=33999.0,
+            discount_percent=9.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=14500,
+            product_url="https://www.amazon.in/dp/B0CQG5W1M5",
+            image_url="https://m.media-amazon.com/images/I/71vdTR5U+VL._SX679_.jpg",
+            brand="Xiaomi",
+            model="Redmi Note 13 Pro+",
+            storage="256 GB",
+            color="Fusion Black"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="REDMI Note 13 Pro+ 5G (Fusion Black, 256 GB)  (8 GB RAM)",
+            price=29999.0,
+            mrp=33999.0,
+            discount_percent=12.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=52100,
+            product_url="https://www.flipkart.com/redmi-note-13-pro-5g-fusion-black-256-gb/p/itm4b94f1c1f727c",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/b/b/j/-original-imagwh52j7qzy9ff.jpeg",
+            brand="Xiaomi",
+            model="Redmi Note 13 Pro+",
+            storage="256 GB",
+            color="Fusion Black"
+        )
+    },
+    "redmi note 13 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Redmi Note 13 Pro 5G (Arctic White, 8GB RAM, 128GB Storage)",
+            price=26999.0,
+            mrp=29999.0,
+            discount_percent=10.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=11000,
+            product_url="https://www.amazon.in/dp/B0CQG5W1N6",
+            image_url="https://m.media-amazon.com/images/I/71vdTR5U+VL._SX679_.jpg",
+            brand="Xiaomi",
+            model="Redmi Note 13 Pro",
+            storage="128 GB",
+            color="Arctic White"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="REDMI Note 13 Pro 5G (Arctic White, 128 GB) (8 GB RAM)",
+            price=25999.0,
+            mrp=29999.0,
+            discount_percent=13.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=39000,
+            product_url="https://www.flipkart.com/redmi-note-13-pro-5g-arctic-white-128-gb/p/itm4b94f1c1f727d",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/b/b/j/-original-imagwh52j7qzy9gg.jpeg",
+            brand="Xiaomi",
+            model="Redmi Note 13 Pro",
+            storage="128 GB",
+            color="Arctic White"
+        )
+    },
+    "xiaomi 14 ultra": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Xiaomi 14 Ultra 5G (Black, 16GB RAM, 512GB Storage)",
+            price=99999.0,
+            mrp=109999.0,
+            discount_percent=9.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.5,
+            reviews_count=1200,
+            product_url="https://www.amazon.in/dp/B0D1PZXYZ1",
+            image_url="https://m.media-amazon.com/images/I/71vdTR5U+QL._SX679_.jpg",
+            brand="Xiaomi",
+            model="14 Ultra",
+            storage="512 GB",
+            color="Black"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Xiaomi 14 Ultra (Black, 512 GB) (16 GB RAM)",
+            price=96999.0,
+            mrp=109999.0,
+            discount_percent=12.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.6,
+            reviews_count=2100,
+            product_url="https://www.flipkart.com/xiaomi-14-ultra-black-512-gb/p/itm4b94f1c1f7280",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/b/b/j/-original-imagwh52j7qzy9hh.jpeg",
+            brand="Xiaomi",
+            model="14 Ultra",
+            storage="512 GB",
+            color="Black"
+        )
+    },
+
+    # ===== Motorola =====
+    "motorola edge 50 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="Motorola Edge 50 Pro 5G (Black Beauty, 12GB RAM, 256GB Storage)",
+            price=29999.0,
+            mrp=35999.0,
+            discount_percent=17.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=3400,
+            product_url="https://www.amazon.in/dp/B0D1PZ1234",
+            image_url="https://m.media-amazon.com/images/I/71vdTR5UAAL._SX679_.jpg",
+            brand="Motorola",
+            model="Edge 50 Pro",
+            storage="256 GB",
+            color="Black Beauty"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="Motorola Edge 50 Pro 5G (Black Beauty, 256 GB) (12 GB RAM)",
+            price=28999.0,
+            mrp=35999.0,
+            discount_percent=19.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=6700,
+            product_url="https://www.flipkart.com/motorola-edge-50-pro-black-beauty-256-gb/p/itm44f7ac04db2a5",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/s/v/s/-original-imagy8tz3ppfrqhd.jpeg",
+            brand="Motorola",
+            model="Edge 50 Pro",
+            storage="256 GB",
+            color="Black Beauty"
+        )
+    },
+
+    # ===== vivo =====
+    "vivo v30 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="vivo V30 Pro 5G (Peacock Green, 12GB RAM, 256GB Storage)",
+            price=40999.0,
+            mrp=44999.0,
+            discount_percent=9.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=2300,
+            product_url="https://www.amazon.in/dp/B0D1PZ5678",
+            image_url="https://m.media-amazon.com/images/I/61WQ4mz4m-L._SX679_.jpg",
+            brand="vivo",
+            model="V30 Pro",
+            storage="256 GB",
+            color="Peacock Green"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="vivo V30 Pro 5G (Peacock Green, 256 GB) (12 GB RAM)",
+            price=39999.0,
+            mrp=44999.0,
+            discount_percent=11.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=4500,
+            product_url="https://www.flipkart.com/vivo-v30-pro-peacock-green-256-gb/p/itm44f7ac04db2a6",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/s/v/s/-original-imagy8tz3ppfrqhe.jpeg",
+            brand="vivo",
+            model="V30 Pro",
+            storage="256 GB",
+            color="Peacock Green"
+        )
+    },
+
+    # ===== OPPO =====
+    "oppo reno 11 pro": {
+        "amazon": ProductData(
+            platform="amazon",
+            title="OPPO Reno11 Pro 5G (Rock Grey, 12GB RAM, 256GB Storage)",
+            price=33999.0,
+            mrp=39999.0,
+            discount_percent=15.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.2,
+            reviews_count=1900,
+            product_url="https://www.amazon.in/dp/B0D1PZ9012",
+            image_url="https://m.media-amazon.com/images/I/71OGCf6YRPL._SX679_.jpg",
+            brand="OPPO",
+            model="Reno11 Pro",
+            storage="256 GB",
+            color="Rock Grey"
+        ),
+        "flipkart": ProductData(
+            platform="flipkart",
+            title="OPPO Reno11 Pro 5G (Rock Grey, 256 GB) (12 GB RAM)",
+            price=32999.0,
+            mrp=39999.0,
+            discount_percent=17.0,
+            stock_status=StockStatus.IN_STOCK,
+            stock_message="In stock.",
+            rating=4.3,
+            reviews_count=3700,
+            product_url="https://www.flipkart.com/oppo-reno11-pro-rock-grey-256-gb/p/itm44f7ac04db2a7",
+            image_url="https://rukminim2.flixcart.com/image/832/832/xif0q/mobile/s/v/s/-original-imagy8tz3ppfrqhf.jpeg",
+            brand="OPPO",
+            model="Reno11 Pro",
+            storage="256 GB",
+            color="Rock Grey"
+        )
     }
 }
 
+
 def get_fallback_product(query: str, platform: str) -> Optional[ProductData]:
     """
-    Find the closest seed entry for a given query and platform.
-    Uses keyword scoring so 'Apple iPhone 15 128GB' correctly matches 'iphone 15'.
+    Find the closest STRICTLY matching seed entry for a given query and platform.
+
+    Rules:
+    - ALL words in the seed key must appear in the query (order-independent).
+    - The LONGEST matching key wins (most specific match).
+    - e.g. 'iphone 15 pro max' query matches 'iphone 15 pro max' key, NOT 'iphone 15'.
+    - Returns None if no seed entry strictly matches — matcher will return NOT_FOUND.
     """
     query_lower = query.lower()
-    best_score = 0
+
+    # Normalize common variations
+    query_lower = query_lower.replace("pro+", "pro plus").replace("pro +", "pro plus")
+    query_lower = query_lower.replace("note13", "note 13").replace("s24ultra", "s24 ultra")
+
+    best_key_len = 0
     best_match = None
 
     for key, data_dict in FALLBACK_PHONES.items():
-        # Score by how many words of the key appear in the query
         key_words = key.split()
-        score = sum(1 for word in key_words if word in query_lower)
-        if score == len(key_words) and score > best_score:  # All key words must match
-            best_score = score
-            best_match = data_dict.get(platform)
+        # ALL key words must appear in the query
+        if all(word in query_lower for word in key_words):
+            # Longer key = more specific = higher priority
+            if len(key_words) > best_key_len:
+                best_key_len = len(key_words)
+                best_match = data_dict.get(platform)
 
     return best_match

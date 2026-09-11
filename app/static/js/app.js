@@ -10,7 +10,7 @@ async function initApp() {
     await loadPopularPills();
     await refreshAnalytics();
     await loadRecentComparisons();
-    // Fire initial search
+    // Fire initial search on load
     performSearch("Apple iPhone 15 128GB", false);
 }
 
@@ -18,17 +18,19 @@ function setupEventListeners() {
     document.getElementById('searchForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const q = document.getElementById('searchInput').value.trim();
-        if (q.length >= 3) performSearch(q, document.getElementById('liveScrapeToggle').checked);
+        if (q.length >= 2) performSearch(q, document.getElementById('liveScrapeToggle').checked);
     });
 }
 
+// ============================================================
+// Popular Pills
+// ============================================================
 async function loadPopularPills() {
     try {
         const { popular } = await API.getPopular();
         const container = document.getElementById('popularPills');
         container.innerHTML = popular.map(p => `
-            <button type="button" onclick="quickSearch('${p.query}')"
-                class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/20 hover:border-white/40 transition-all backdrop-blur-sm">
+            <button type="button" onclick="quickSearch('${p.query}')" class="popular-pill">
                 ${p.name}
             </button>
         `).join('');
@@ -40,13 +42,18 @@ function quickSearch(query) {
     performSearch(query, document.getElementById('liveScrapeToggle').checked);
 }
 
-// ============ Pipeline Animator ============
+// ============================================================
+// Pipeline Animator
+// ============================================================
 async function animatePipeline(telemetry) {
+    // Reset all stages
     for (let i = 1; i <= 5; i++) {
         const step = document.getElementById(`pipelineStep${i}`);
         const status = document.getElementById(`stepStatus${i}`);
-        if (step) { step.className = 'pipeline-step px-4 py-3'; }
-        if (status) status.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block"></span>Waiting`;
+        const time = document.getElementById(`stepTime${i}`);
+        if (step) step.className = 'pipeline-stage';
+        if (status) status.innerHTML = `<span class="status-dot"></span> Waiting`;
+        if (time) time.innerText = '—';
     }
 
     for (const item of telemetry) {
@@ -54,83 +61,99 @@ async function animatePipeline(telemetry) {
         const status = document.getElementById(`stepStatus${item.stage}`);
         const time = document.getElementById(`stepTime${item.stage}`);
 
-        if (step) step.classList.add('active');
-        if (status) status.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping inline-block"></span><span class="text-indigo-600 font-medium">Processing</span>`;
+        if (step) { step.className = 'pipeline-stage'; step.classList.add('active'); }
+        if (status) status.innerHTML = `<span class="status-dot active"></span><span style="color:var(--accent-bright);font-weight:600;">Processing</span>`;
 
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 120));
 
-        if (step) { step.classList.remove('active'); step.classList.add('completed'); }
-        if (status) status.innerHTML = `<svg class="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg><span class="text-green-600 font-semibold">Done</span>`;
+        if (step) { step.className = 'pipeline-stage'; step.classList.add('completed'); }
+        if (status) status.innerHTML = `<span class="status-dot done"></span><span style="color:var(--green);font-weight:600;">Done</span>`;
         if (time) time.innerText = `${item.duration_ms}ms`;
     }
 }
 
-// ============ Stock Badge Renderer ============
+// ============================================================
+// Stock Badge Renderer
+// ============================================================
 function stockBadge(status) {
     if (status === 'IN_STOCK') {
-        return `<span class="badge-in-stock"><span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>In Stock</span>`;
+        return `<span class="stock-badge badge-in-stock"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;"></span>In Stock</span>`;
     } else if (status === 'OUT_OF_STOCK') {
-        return `<span class="badge-out-of-stock"><span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Out of Stock</span>`;
+        return `<span class="stock-badge badge-out-of-stock"><span style="width:6px;height:6px;border-radius:50%;background:var(--red);display:inline-block;"></span>Out of Stock</span>`;
     } else if (status === 'NOT_FOUND') {
-        return `<span class="badge-not-found"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span>Not Found</span>`;
+        return `<span class="stock-badge badge-not-found"><span style="width:6px;height:6px;border-radius:50%;background:var(--slate);display:inline-block;"></span>Not Found</span>`;
     } else {
-        return `<span class="badge-unavailable"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>Unavailable</span>`;
+        return `<span class="stock-badge badge-unavailable"><span style="width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block;"></span>Unavailable</span>`;
     }
 }
 
-// ============ Price Section Renderer ============
+// ============================================================
+// Price Section Renderer
+// KEY: If product is NOT_FOUND / OUT_OF_STOCK / UNAVAILABLE
+//      show locked overlay — never show a price comparison for wrong phones
+// ============================================================
 function renderPriceSection(product, platform) {
+    const platformLabel = platform === 'amazon' ? 'Amazon India' : 'Flipkart';
+
+    // Not Found on this platform
     if (!product || product.stock_status === 'NOT_FOUND') {
         return `
-            <div class="oos-overlay rounded-xl p-6 text-center border-2 border-dashed border-gray-200">
-                <div class="text-4xl mb-2">🔍</div>
-                <div class="text-sm font-bold text-gray-500">Not Found on ${platform === 'amazon' ? 'Amazon India' : 'Flipkart'}</div>
-                <div class="text-xs text-gray-400 mt-1">This exact variant was not listed</div>
+            <div class="oos-overlay not-found">
+                <div class="oos-icon">🔍</div>
+                <div class="oos-title" style="color:var(--text-secondary);">Not Found on ${platformLabel}</div>
+                <div class="oos-subtitle">This exact variant is not listed on ${platformLabel}</div>
             </div>`;
     }
 
+    // Out of Stock
     if (product.stock_status === 'OUT_OF_STOCK') {
         return `
-            <div class="oos-overlay rounded-xl p-5 border-2 border-dashed border-red-200 text-center">
-                <div class="text-4xl mb-2">❌</div>
-                <div class="text-sm font-bold text-red-600">Out of Stock</div>
-                <div class="text-xs text-gray-400 mt-1 mb-3">${product.stock_message}</div>
-                ${product.price ? `<div class="text-lg font-black text-gray-300 line-through">₹${Number(product.price).toLocaleString('en-IN')}</div>
-                <div class="text-xs text-gray-400">Last known price</div>` : ''}
+            <div class="oos-overlay out-of-stock">
+                <div class="oos-icon">❌</div>
+                <div class="oos-title" style="color:var(--red);">Out of Stock</div>
+                <div class="oos-subtitle">${product.stock_message || 'Currently out of stock on ' + platformLabel}</div>
+                ${product.price ? `
+                    <div class="oos-last-price">₹${Number(product.price).toLocaleString('en-IN')}</div>
+                    <div class="oos-last-label">Last known price</div>
+                ` : ''}
             </div>`;
     }
 
+    // Currently Unavailable
     if (product.stock_status === 'CURRENTLY_UNAVAILABLE') {
         return `
-            <div class="oos-overlay rounded-xl p-5 border-2 border-dashed border-amber-200 text-center">
-                <div class="text-4xl mb-2">⚠️</div>
-                <div class="text-sm font-bold text-amber-700">Currently Unavailable</div>
-                <div class="text-xs text-gray-400 mt-1">${product.stock_message}</div>
+            <div class="oos-overlay unavailable">
+                <div class="oos-icon">⚠️</div>
+                <div class="oos-title" style="color:var(--amber);">Currently Unavailable</div>
+                <div class="oos-subtitle">${product.stock_message || 'Temporarily unavailable on ' + platformLabel}</div>
             </div>`;
     }
 
-    // In Stock — show full price block
+    // In Stock — full price block
     const price = Number(product.price).toLocaleString('en-IN');
     const mrp = product.mrp ? Number(product.mrp).toLocaleString('en-IN') : null;
-    const discount = product.discount_percent ? `${product.discount_percent}%` : null;
+    const discount = product.discount_percent ? `${product.discount_percent}% OFF` : null;
 
     return `
-        <div class="flex items-end justify-between">
-            <div>
-                <div class="text-xs text-gray-400 font-medium mb-1">Selling Price</div>
-                <div class="text-4xl font-black text-gray-900">₹${price}</div>
-                ${mrp ? `<div class="flex items-center gap-2 mt-1">
-                    <span class="text-sm text-gray-400 line-through">₹${mrp}</span>
-                    ${discount ? `<span class="text-xs font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">${discount} OFF</span>` : ''}
-                </div>` : ''}
-            </div>
+        <div>
+            <div class="price-label">Selling Price</div>
+            <div class="price-main">₹${price}</div>
+            ${mrp ? `
+            <div class="price-meta">
+                <span class="price-mrp">₹${mrp}</span>
+                ${discount ? `<span class="discount-badge">${discount}</span>` : ''}
+            </div>` : ''}
         </div>`;
 }
 
-// ============ Spec Table Renderer ============
+// ============================================================
+// Spec Table Renderer
+// ============================================================
 function renderSpecTable(amazon, flipkart, analysis) {
     const table = document.getElementById('specTable');
     const tbody = document.getElementById('specTableBody');
+
+    // Hide table if neither product found
     if (!amazon && !flipkart) { table.classList.add('hidden'); return; }
 
     const amzPrice = amazon?.price;
@@ -139,7 +162,7 @@ function renderSpecTable(amazon, flipkart, analysis) {
 
     const rows = [
         {
-            label: 'Selling Price', 
+            label: 'Selling Price',
             amz: amzPrice ? `₹${Number(amzPrice).toLocaleString('en-IN')}` : '—',
             fpk: fpkPrice ? `₹${Number(fpkPrice).toLocaleString('en-IN')}` : '—',
             winAmz: cheaper === 'amazon', winFpk: cheaper === 'flipkart'
@@ -151,7 +174,7 @@ function renderSpecTable(amazon, flipkart, analysis) {
             winAmz: false, winFpk: false
         },
         {
-            label: 'Discount %',
+            label: 'Discount',
             amz: amazon?.discount_percent ? `${amazon.discount_percent}%` : '—',
             fpk: flipkart?.discount_percent ? `${flipkart.discount_percent}%` : '—',
             winAmz: (amazon?.discount_percent || 0) > (flipkart?.discount_percent || 0),
@@ -159,8 +182,8 @@ function renderSpecTable(amazon, flipkart, analysis) {
         },
         {
             label: 'Stock Status',
-            amz: amazon?.stock_status?.replace('_', ' ') || '—',
-            fpk: flipkart?.stock_status?.replace('_', ' ') || '—',
+            amz: amazon?.stock_status?.replace(/_/g, ' ') || '—',
+            fpk: flipkart?.stock_status?.replace(/_/g, ' ') || '—',
             winAmz: amazon?.stock_status === 'IN_STOCK' && flipkart?.stock_status !== 'IN_STOCK',
             winFpk: flipkart?.stock_status === 'IN_STOCK' && amazon?.stock_status !== 'IN_STOCK'
         },
@@ -180,87 +203,102 @@ function renderSpecTable(amazon, flipkart, analysis) {
         },
         {
             label: 'Price Difference',
-            amz: analysis?.abs_price_diff ? `₹${Number(analysis.abs_price_diff).toLocaleString('en-IN')} cheaper` : '—',
-            fpk: analysis?.abs_price_diff ? `₹${Number(analysis.abs_price_diff).toLocaleString('en-IN')} cheaper` : '—',
-            winAmz: cheaper === 'amazon', winFpk: cheaper === 'flipkart'
+            amz: cheaper === 'amazon' && analysis?.abs_price_diff ? `₹${Number(analysis.abs_price_diff).toLocaleString('en-IN')} cheaper` : '—',
+            fpk: cheaper === 'flipkart' && analysis?.abs_price_diff ? `₹${Number(analysis.abs_price_diff).toLocaleString('en-IN')} cheaper` : '—',
+            winAmz: cheaper === 'amazon',
+            winFpk: cheaper === 'flipkart'
         }
     ];
 
     tbody.innerHTML = rows.map(r => `
         <tr>
-            <td class="text-gray-500 font-medium">${r.label}</td>
-            <td class="text-center ${r.winAmz ? 'winner-cell' : ''}">${r.amz}</td>
-            <td class="text-center ${r.winFpk ? 'winner-cell' : ''}">${r.fpk}</td>
+            <td>${r.label}</td>
+            <td class="${r.winAmz ? 'winner-cell' : ''}">${r.amz}</td>
+            <td class="${r.winFpk ? 'winner-cell' : ''}">${r.fpk}</td>
         </tr>
     `).join('');
 
     table.classList.remove('hidden');
 }
 
-// ============ Main Render ============
+// ============================================================
+// Main Render — Called after each search completes
+// ============================================================
 function renderUI(data) {
     const { analysis, amazon: amz, flipkart: fpk } = data;
 
-    // Winner Banner
+    // ---- Winner Banner ----
     const banner = document.getElementById('winnerBanner');
     const winnerText = document.getElementById('winnerText');
     const winnerSub = document.getElementById('winnerSub');
     const winnerBadge = document.getElementById('winnerBadge');
 
+    banner.className = 'winner-banner slide-up';
+    winnerBadge.className = 'winner-badge';
+
     if (analysis.cheaper_platform === 'flipkart' && analysis.savings_amount > 0) {
-        banner.className = 'rounded-2xl p-5 bg-blue-50 border border-blue-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3';
-        winnerText.innerHTML = `<span class="text-blue-700">🎉 <strong>Flipkart</strong> is ₹${Number(analysis.savings_amount).toLocaleString('en-IN')} cheaper (${analysis.savings_percent}% off Amazon's price)</span>`;
-        winnerBadge.className = 'px-4 py-2 rounded-xl text-sm font-bold bg-blue-600 text-white shadow-sm';
+        banner.classList.add('winner-flipkart');
+        winnerText.innerHTML = `🎉 <strong>Flipkart</strong> is ₹${Number(analysis.savings_amount).toLocaleString('en-IN')} cheaper <span style="color:var(--text-secondary);font-weight:400;">(${analysis.savings_percent}% less than Amazon)</span>`;
+        winnerBadge.className = 'winner-badge badge-flipkart';
         winnerBadge.innerText = '✓ Best Deal: Flipkart';
     } else if (analysis.cheaper_platform === 'amazon' && analysis.savings_amount > 0) {
-        banner.className = 'rounded-2xl p-5 bg-amber-50 border border-amber-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3';
-        winnerText.innerHTML = `<span class="text-amber-800">🎉 <strong>Amazon</strong> is ₹${Number(analysis.savings_amount).toLocaleString('en-IN')} cheaper (${analysis.savings_percent}% off Flipkart's price)</span>`;
-        winnerBadge.className = 'px-4 py-2 rounded-xl text-sm font-bold bg-amber-500 text-white shadow-sm';
+        banner.classList.add('winner-amazon');
+        winnerText.innerHTML = `🎉 <strong>Amazon</strong> is ₹${Number(analysis.savings_amount).toLocaleString('en-IN')} cheaper <span style="color:var(--text-secondary);font-weight:400;">(${analysis.savings_percent}% less than Flipkart)</span>`;
+        winnerBadge.className = 'winner-badge badge-amazon';
         winnerBadge.innerText = '✓ Best Deal: Amazon';
     } else if (analysis.cheaper_platform === 'equal') {
-        banner.className = 'rounded-2xl p-5 bg-emerald-50 border border-emerald-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3';
-        winnerText.innerHTML = `<span class="text-emerald-700">🤝 <strong>Same price</strong> on both platforms — ₹${Number(analysis.amazon_price || 0).toLocaleString('en-IN')}</span>`;
-        winnerBadge.className = 'px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white';
+        banner.classList.add('winner-equal');
+        winnerText.innerHTML = `🤝 <strong>Same price</strong> on both platforms — ₹${Number(analysis.amazon_price || 0).toLocaleString('en-IN')}`;
+        winnerBadge.className = 'winner-badge badge-equal';
         winnerBadge.innerText = '⚖ Equal Price';
     } else {
-        banner.className = 'rounded-2xl p-5 bg-gray-50 border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3';
-        winnerText.innerHTML = `<span class="text-gray-700">${analysis.deal_summary}</span>`;
-        winnerBadge.className = 'px-4 py-2 rounded-xl text-sm font-bold bg-gray-200 text-gray-600';
+        winnerText.innerHTML = `<span style="color:var(--text-secondary)">${escHtml(analysis.deal_summary)}</span>`;
         winnerBadge.innerText = analysis.deal_badge;
     }
-    winnerSub.innerText = `${analysis.stock_summary} · Match confidence: ${data.match_confidence}%`;
 
-    // Amazon Card
+    winnerSub.innerText = `${analysis.stock_summary}  ·  Match confidence: ${data.match_confidence}%`;
+
+    // ---- Amazon Card ----
     document.getElementById('amzStock').innerHTML = stockBadge(amz?.stock_status || 'NOT_FOUND');
     document.getElementById('amzTitle').innerText = amz?.title || 'Not found on Amazon India';
     document.getElementById('amzStockMsg').innerText = amz?.stock_message || '';
-    document.getElementById('amzImg').src = amz?.image_url || 'https://via.placeholder.com/120x120?text=📱';
+    const amzImgEl = document.getElementById('amzImg');
+    if (amz?.image_url) { amzImgEl.src = amz.image_url; amzImgEl.style.display = 'block'; }
+    else { amzImgEl.style.display = 'none'; }
     document.getElementById('amzPriceSection').innerHTML = renderPriceSection(amz, 'amazon');
-    document.getElementById('amzRating').innerHTML = amz?.rating ? `<span class="text-amber-400">★</span> ${amz.rating} (${Number(amz.reviews_count || 0).toLocaleString('en-IN')} reviews)` : '<span class="text-amber-400">★</span> —';
+    document.getElementById('amzRating').innerHTML = amz?.rating
+        ? `<span class="rating-stars">★</span> ${amz.rating} <span style="color:var(--text-muted)">(${Number(amz.reviews_count || 0).toLocaleString('en-IN')} reviews)</span>`
+        : `<span class="rating-stars">★</span> —`;
     document.getElementById('amzBuyBtn').href = amz?.product_url || '#';
 
     const amzCard = document.getElementById('amazonCard');
     amzCard.classList.remove('winner-card-amazon', 'winner-card-flipkart');
-    if (analysis.cheaper_platform === 'amazon') amzCard.classList.add('winner-card-amazon');
+    if (analysis.cheaper_platform === 'amazon' && analysis.savings_amount > 0) amzCard.classList.add('winner-card-amazon');
 
-    // Flipkart Card
+    // ---- Flipkart Card ----
     document.getElementById('fpkStock').innerHTML = stockBadge(fpk?.stock_status || 'NOT_FOUND');
     document.getElementById('fpkTitle').innerText = fpk?.title || 'Not found on Flipkart';
     document.getElementById('fpkStockMsg').innerText = fpk?.stock_message || '';
-    document.getElementById('fpkImg').src = fpk?.image_url || 'https://via.placeholder.com/120x120?text=📱';
+    const fpkImgEl = document.getElementById('fpkImg');
+    if (fpk?.image_url) { fpkImgEl.src = fpk.image_url; fpkImgEl.style.display = 'block'; }
+    else { fpkImgEl.style.display = 'none'; }
     document.getElementById('fpkPriceSection').innerHTML = renderPriceSection(fpk, 'flipkart');
-    document.getElementById('fpkRating').innerHTML = fpk?.rating ? `<span class="text-amber-400">★</span> ${fpk.rating} (${Number(fpk.reviews_count || 0).toLocaleString('en-IN')} reviews)` : '<span class="text-amber-400">★</span> —';
+    document.getElementById('fpkRating').innerHTML = fpk?.rating
+        ? `<span class="rating-stars">★</span> ${fpk.rating} <span style="color:var(--text-muted)">(${Number(fpk.reviews_count || 0).toLocaleString('en-IN')} reviews)</span>`
+        : `<span class="rating-stars">★</span> —`;
     document.getElementById('fpkBuyBtn').href = fpk?.product_url || '#';
 
     const fpkCard = document.getElementById('flipkartCard');
     fpkCard.classList.remove('winner-card-amazon', 'winner-card-flipkart');
-    if (analysis.cheaper_platform === 'flipkart') fpkCard.classList.add('winner-card-flipkart');
+    if (analysis.cheaper_platform === 'flipkart' && analysis.savings_amount > 0) fpkCard.classList.add('winner-card-flipkart');
 
-    // Spec Comparison Table
+    // ---- Spec Table ----
     renderSpecTable(amz, fpk, analysis);
 }
 
-// ============ performSearch ============
+// ============================================================
+// Main Search Function
+// ============================================================
 async function performSearch(query, live = false) {
     const btn = document.getElementById('searchBtn');
     const spinner = document.getElementById('searchSpinner');
@@ -268,7 +306,7 @@ async function performSearch(query, live = false) {
 
     btn.disabled = true;
     spinner.classList.remove('hidden');
-    btnText.innerText = 'Analyzing...';
+    btnText.innerText = 'Analyzing…';
 
     try {
         const result = await API.compare(query, live);
@@ -280,7 +318,9 @@ async function performSearch(query, live = false) {
         await loadRecentComparisons();
     } catch (err) {
         console.error(err);
+        const banner = document.getElementById('winnerBanner');
         document.getElementById('winnerText').innerText = `Error: ${err.message}`;
+        banner.className = 'winner-banner';
     } finally {
         btn.disabled = false;
         spinner.classList.add('hidden');
@@ -288,6 +328,9 @@ async function performSearch(query, live = false) {
     }
 }
 
+// ============================================================
+// Analytics
+// ============================================================
 async function refreshAnalytics() {
     try {
         const stats = await API.getAnalytics();
@@ -299,37 +342,50 @@ async function refreshAnalytics() {
     } catch (e) { console.error(e); }
 }
 
+// ============================================================
+// Recent Comparisons Table
+// ============================================================
 async function loadRecentComparisons() {
     try {
         const { recent } = await API.getRecent();
         const tbody = document.getElementById('recentTableBody');
         if (!recent || recent.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 text-sm">No comparisons yet. Search above to start!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">No comparisons yet. Search above to get started!</td></tr>`;
             return;
         }
         tbody.innerHTML = recent.map(row => {
-            const time = row.created_at ? new Date(row.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—';
+            const dt = row.created_at ? new Date(row.created_at) : null;
+            const time = dt ? dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—';
             const amzPrice = row.amazon_price ? `₹${Number(row.amazon_price).toLocaleString('en-IN')}` : '—';
             const fpkPrice = row.flipkart_price ? `₹${Number(row.flipkart_price).toLocaleString('en-IN')}` : '—';
             const diff = row.price_diff != null ? `₹${Math.abs(row.price_diff).toLocaleString('en-IN')}` : '—';
 
-            let dealPill = `<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 font-medium">N/A</span>`;
+            let dealPill = `<span class="deal-pill deal-na">N/A</span>`;
             if (row.cheaper_platform === 'flipkart') {
-                dealPill = `<span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-semibold border border-blue-200">Flipkart wins</span>`;
+                dealPill = `<span class="deal-pill deal-flipkart">Flipkart wins</span>`;
             } else if (row.cheaper_platform === 'amazon') {
-                dealPill = `<span class="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 font-semibold border border-amber-200">Amazon wins</span>`;
+                dealPill = `<span class="deal-pill deal-amazon">Amazon wins</span>`;
             } else if (row.cheaper_platform === 'equal') {
-                dealPill = `<span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200">Equal</span>`;
+                dealPill = `<span class="deal-pill deal-equal">Equal</span>`;
             }
 
-            return `<tr class="hover:bg-gray-50 cursor-pointer transition-colors" onclick="quickSearch('${row.query}')">
-                <td class="py-3 px-5 font-semibold text-gray-800 text-sm">${row.product_name}</td>
-                <td class="py-3 px-4 text-gray-600">${amzPrice}</td>
-                <td class="py-3 px-4 text-gray-600">${fpkPrice}</td>
-                <td class="py-3 px-4 font-bold text-gray-800">${diff}</td>
-                <td class="py-3 px-4">${dealPill}</td>
-                <td class="py-3 px-4 text-xs text-gray-400">${time}</td>
+            const query = row.query.replace(/'/g, "\\'");
+            return `<tr onclick="quickSearch('${query}')">
+                <td><span class="recent-product-name">${escHtml(row.product_name)}</span></td>
+                <td>${amzPrice}</td>
+                <td>${fpkPrice}</td>
+                <td style="font-weight:700;color:var(--text-primary);">${diff}</td>
+                <td>${dealPill}</td>
+                <td style="font-size:12px;color:var(--text-muted);">${time}</td>
             </tr>`;
         }).join('');
     } catch (e) { console.error(e); }
+}
+
+// ============================================================
+// Utility
+// ============================================================
+function escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

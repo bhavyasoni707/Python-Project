@@ -1,7 +1,10 @@
 """
 Strict Smartphone Variant Matching Engine
 Ensures we compare the EXACT same phone model and storage variant
-between Amazon and Flipkart. No substitutions.
+between Amazon and Flipkart. No substitutions. No wrong phone matches.
+
+Key principle: If a phone is NOT found on a platform → return NOT_FOUND.
+NEVER fall back to a different phone model.
 """
 
 import re
@@ -29,7 +32,28 @@ class SmartphoneMatcher:
     ACCESSORY_KEYWORDS = [
         "case", "cover", "tempered glass", "screen protector", "cable",
         "pouch", "charger", "adapter", "earphone", "headphone", "skin",
-        "back cover", "flip cover", "wallet case", "bumper"
+        "back cover", "flip cover", "wallet case", "bumper", "stylus",
+        "stand", "holder", "mount", "powerbank", "power bank"
+    ]
+
+    # Known brand names — used for brand-first filtering
+    KNOWN_BRANDS = [
+        "apple", "iphone",
+        "samsung", "galaxy",
+        "oneplus", "nord",
+        "google", "pixel",
+        "xiaomi", "redmi", "poco",
+        "realme",
+        "motorola", "moto",
+        "vivo",
+        "oppo",
+        "nothing",
+        "iqoo",
+        "asus",
+        "infinix",
+        "tecno",
+        "honor",
+        "lava"
     ]
 
     @staticmethod
@@ -38,16 +62,13 @@ class SmartphoneMatcher:
         Extract and normalize storage from text.
         Returns canonical form e.g. '128GB', '256GB', '1TB'.
         """
-        # TB first
         tb_match = re.search(r"\b(\d+)\s*TB\b", text, re.IGNORECASE)
         if tb_match:
             return f"{tb_match.group(1)}TB"
 
-        # GB next — but ignore RAM mentions like "8GB RAM"
-        # Strategy: find all GB numbers, exclude those followed by 'ram'
+        # GB — but ignore RAM mentions like "8GB RAM"
         gb_matches = re.findall(r"\b(\d+)\s*GB(?!\s*RAM)", text, re.IGNORECASE)
         if gb_matches:
-            # Pick the largest value — that's typically storage not RAM
             values = [int(x) for x in gb_matches]
             valid = [v for v in values if v in (16, 32, 64, 128, 256, 512)]
             if valid:
@@ -68,14 +89,26 @@ class SmartphoneMatcher:
         """
         Extract meaningful model keywords from a search query.
         e.g. 'Apple iPhone 15 Pro Max 256GB' → ['apple', 'iphone', '15', 'pro', 'max']
+
+        CRITICAL: Keywords extracted here must ALL appear in a title for it to match.
+        This prevents cross-model contamination.
         """
+        # Normalize variations
+        query = query.replace("+", " plus").replace("pro+", "pro plus")
+
         # Remove storage/RAM specs
         cleaned = re.sub(r"\b\d+\s*(GB|TB)\b", "", query, flags=re.IGNORECASE)
         cleaned = re.sub(r"\bRAM\b", "", cleaned, flags=re.IGNORECASE)
-        # Extract word tokens
+
+        # Extract word tokens (include numbers — e.g. "15", "12", "S24")
         tokens = re.findall(r"\b[a-zA-Z0-9]+\b", cleaned)
+
         # Filter trivial words
-        stopwords = {"the", "a", "an", "and", "or", "for", "of", "in", "with", "smartphone", "mobile", "phone"}
+        stopwords = {
+            "the", "a", "an", "and", "or", "for", "of", "in", "with",
+            "smartphone", "mobile", "phone", "5g", "4g", "india", "in",
+            "buy", "best", "new", "latest", "official", "original"
+        }
         keywords = [t.lower() for t in tokens if t.lower() not in stopwords and len(t) > 1]
         return keywords
 
@@ -88,11 +121,18 @@ class SmartphoneMatcher:
     @classmethod
     def title_matches_query(cls, title: str, query_keywords: List[str]) -> bool:
         """
-        Returns True if the product title contains all critical query keywords.
-        This prevents matching 'OnePlus 12' with 'OnePlus Nord' etc.
+        Returns True ONLY if ALL query keywords appear in the product title.
+        This is the core strict matching gate — prevents wrong phone matches.
+
+        Special handling:
+        - 'pro max' in query → title must contain BOTH 'pro' AND 'max'
+        - 'ultra' in query → title must contain 'ultra'
+        - Numbers like '15', '24', '12' must appear in title
         """
         title_lower = title.lower()
-        # All query keywords must appear in the title
+        # Normalize title for matching
+        title_lower = title_lower.replace("+", " plus").replace("pro+", "pro plus")
+
         return all(kw in title_lower for kw in query_keywords)
 
     @classmethod
@@ -114,8 +154,10 @@ class SmartphoneMatcher:
         query_storage: Optional[str]
     ) -> List[ProductData]:
         """
-        Pre-filter scraped candidates to only those matching the query's
-        model keywords AND storage variant. Returns empty list if nothing matches.
+        Pre-filter scraped candidates to only those matching ALL query keywords
+        AND storage variant. Returns empty list if nothing matches.
+
+        Empty list means NOT_FOUND for that platform — do NOT substitute.
         """
         filtered = []
         for product in candidates:
@@ -140,8 +182,9 @@ class SmartphoneMatcher:
 
         Strategy:
         1. Extract query keywords + storage.
-        2. Pre-filter each platform's candidates to exact model + storage match.
-        3. If a platform has NO valid candidates after filtering → return NOT_FOUND for that slot.
+        2. Pre-filter each platform's candidates — ALL keywords must match.
+        3. If a platform has NO valid candidates after filtering → NOT_FOUND for that slot.
+           NEVER substitute a different phone model.
         4. Pick the highest fuzzy-similarity pair from the filtered sets.
 
         Returns: (amazon_product_or_None, flipkart_product_or_None, similarity_score)
@@ -175,7 +218,7 @@ class SmartphoneMatcher:
         if not amz_filtered and not fpk_filtered:
             return not_found("amazon", target_query), not_found("flipkart", target_query), 0.0
 
-        # If only one platform has results
+        # If only one platform has results → other gets NOT_FOUND (no substitution!)
         if not amz_filtered:
             return not_found("amazon", target_query), fpk_filtered[0], 0.0
         if not fpk_filtered:

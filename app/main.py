@@ -6,11 +6,10 @@ analytics aggregations, and data export.
 
 import io
 import pandas as pd
-from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import FastAPI, Query, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import STATIC_DIR, TEMPLATES_DIR, POPULAR_PHONES
@@ -25,23 +24,10 @@ from app.pipeline.pipeline import ComparisonPipeline
 
 pipeline = ComparisonPipeline()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Initialize SQLite database on startup
-    init_db()
-    # Pre-seed top popular smartphones so dashboard charts and analytics have rich data immediately
-    try:
-        for item in POPULAR_PHONES[:4]:
-            pipeline.run(item["query"])
-    except Exception:
-        pass
-    yield
-
 app = FastAPI(
     title="Amazon vs Flipkart Smartphone Price Comparison Analyzer",
     description="Full-stack web scraping and data analytics platform for smartphone price and stock comparison.",
-    version="1.0.0",
-    lifespan=lifespan
+    version="2.0.0",
 )
 
 # CORS configuration
@@ -56,6 +42,16 @@ app.add_middleware(
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup."""
+    try:
+        init_db()
+    except Exception as e:
+        print(f"[WARNING] DB init failed: {e}")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
     """Serve the interactive dashboard HTML."""
@@ -63,6 +59,7 @@ async def serve_dashboard():
     if not index_file.exists():
         raise HTTPException(status_code=404, detail="Template index.html not found.")
     return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
+
 
 @app.get("/api/compare")
 async def compare_smartphone(
@@ -72,9 +69,10 @@ async def compare_smartphone(
     """Run the complete comparative pipeline for a smartphone query."""
     if not q or len(q.strip()) < 2:
         raise HTTPException(status_code=400, detail="Search query must be at least 2 characters.")
-    
+
     result = pipeline.run(query=q, force_live=live)
     return result
+
 
 @app.get("/api/history/{product_name}")
 async def get_product_history(product_name: str):
@@ -82,10 +80,12 @@ async def get_product_history(product_name: str):
     data = get_price_history(product_name)
     return data
 
+
 @app.get("/api/popular")
 async def get_popular_phones():
     """Return curated popular smartphones for quick search pills."""
     return {"popular": POPULAR_PHONES}
+
 
 @app.get("/api/recent")
 async def get_recent():
@@ -93,11 +93,13 @@ async def get_recent():
     records = get_recent_comparisons(limit=12)
     return {"recent": records}
 
+
 @app.get("/api/analytics/overview")
 async def get_analytics():
     """Return aggregate analytics for dashboard KPIs."""
     summary = get_analytics_summary()
     return summary
+
 
 @app.get("/api/export")
 async def export_data(format: str = Query("csv", pattern="^(csv|json)$")):
@@ -105,9 +107,9 @@ async def export_data(format: str = Query("csv", pattern="^(csv|json)$")):
     records = get_recent_comparisons(limit=100)
     if not records:
         raise HTTPException(status_code=404, detail="No comparison data found to export.")
-    
+
     df = pd.DataFrame(records)
-    
+
     if format == "csv":
         csv_buffer = io.StringIO()
         df.to_csv(csv_buffer, index=False)
