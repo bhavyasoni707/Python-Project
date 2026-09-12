@@ -1,12 +1,11 @@
-"""
+﻿"""
 Amazon India Smartphone Scraper
 Uses curl_cffi to impersonate real Chrome TLS fingerprints and bypass bot detection.
 Falls back to seed catalog on blocking. NEVER synthesizes fake prices.
 
-Key fix: Search query does NOT append "smartphone" — it causes Amazon to
-return unrelated items (USB drives, cables) that happen to have matching GB numbers.
-Instead, use the exact query. If live scraping returns results that don't match the
-phone query keywords, discard them and use the seed catalog.
+Price fix: Use span.a-offscreen inside .a-price:not([data-a-strike]) for the
+CURRENT selling price. Amazon renders a-price-whole WITHOUT the full number
+in some layouts - a-offscreen always has the full formatted price like "₹59,999".
 """
 
 import re
@@ -44,13 +43,67 @@ class AmazonScraper(BaseScraper):
     def _clean_price(self, text: Optional[str]) -> Optional[float]:
         if not text:
             return None
+        # Remove rupee symbol, commas, spaces — keep digits and ONE decimal point
         cleaned = re.sub(r"[^\d.]", "", text.strip())
-        # Valid phone prices are ₹5,000–₹2,00,000
+        # Remove trailing dot (Amazon renders "59,999.")
+        cleaned = cleaned.rstrip(".")
         try:
             val = float(cleaned)
+            # Valid phone prices are ₹5,000–₹2,00,000
             return val if 5000 <= val <= 200000 else None
         except ValueError:
             return None
+
+    def _extract_current_price(self, card) -> Optional[float]:
+        """
+        Extract the CURRENT selling price from an Amazon search card.
+        Amazon renders prices in multiple ways — try in priority order:
+          1. span.a-offscreen inside .a-price (NOT the struck-through MRP)
+          2. span.a-price-whole (integer part only — combine with fraction)
+          3. Any visible price text
+        """
+        # Method 1: a-offscreen gives the full formatted price e.g. "₹59,999"
+        # Must exclude the struck-through MRP (data-a-strike="true")
+        for price_wrap in card.select("span.a-price"):
+            if price_wrap.get("data-a-strike") == "true":
+                continue  # This is the MRP, skip
+            offscreen = price_wrap.select_one("span.a-offscreen")
+            if offscreen:
+                price = self._clean_price(offscreen.get_text())
+                if price:
+                    return price
+
+        # Method 2: a-price-whole + a-price-fraction
+        whole_el = card.select_one("span.a-price-whole")
+        if whole_el:
+            whole_text = whole_el.get_text(strip=True).rstrip(".")
+            frac_el = card.select_one("span.a-price-fraction")
+            frac_text = frac_el.get_text(strip=True) if frac_el else "00"
+            combined = f"{whole_text}.{frac_text}"
+            price = self._clean_price(combined)
+            if price:
+                return price
+
+        return None
+
+    def _extract_mrp(self, card) -> Optional[float]:
+        """Extract the MRP (struck-through original price)."""
+        # Method 1: struck-through a-price
+        mrp_wrap = card.select_one("span.a-price[data-a-strike='true']")
+        if mrp_wrap:
+            offscreen = mrp_wrap.select_one("span.a-offscreen")
+            if offscreen:
+                return self._clean_price(offscreen.get_text())
+
+        # Method 2: basis price classes
+        for sel in ["span.a-text-price span.a-offscreen", "span.a-color-secondary span.a-offscreen"]:
+            el = card.select_one(sel)
+            if el:
+                mrp = self._clean_price(el.get_text())
+                if mrp:
+                    return mrp
+
+        return None
 
     def _stock_from_text(self, text: str) -> tuple[StockStatus, str]:
         t = text.lower()
@@ -68,7 +121,6 @@ class AmazonScraper(BaseScraper):
         """Search Amazon India. Returns only genuine phone matches, never fake data."""
         results: List[ProductData] = []
 
-        # Use the query AS-IS — do NOT append "smartphone" (causes USB drives/accessories to appear)
         encoded = urllib.parse.quote_plus(query)
         search_url = f"{self.base_url}/s?k={encoded}"
 
@@ -88,7 +140,7 @@ class AmazonScraper(BaseScraper):
                 cards = soup.select('div[data-component-type="s-search-result"]')
 
                 for card in cards[:10]:
-                    # Try multiple title selectors Amazon uses
+                    # Try multiple title selectors
                     title = None
                     for title_selector in ["h2 span", "h2 a span", "span.a-size-base-plus", "span.a-size-large"]:
                         title_el = card.select_one(title_selector)
@@ -100,12 +152,10 @@ class AmazonScraper(BaseScraper):
                     if not title:
                         continue
 
-                    # Hard-filter: must look like a smartphone listing
                     if not _is_likely_phone(title):
                         continue
 
                     tl = title.lower()
-                    # Filter accessories
                     if any(kw in tl for kw in [
                         "case", "cover", "tempered", "screen protector", "cable",
                         "pouch", "charger", "skin", "bumper", "adapter", "earphone",
@@ -113,11 +163,13 @@ class AmazonScraper(BaseScraper):
                     ]):
                         continue
 
-                    price_el = card.select_one("span.a-price-whole")
-                    price = self._clean_price(price_el.get_text()) if price_el else None
+                    # Use improved price extractors
+                    price = self._extract_current_price(card)
+                    mrp = self._extract_mrp(card)
 
-                    mrp_el = card.select_one("span.a-price[data-a-strike='true'] span.a-offscreen")
-                    mrp = self._clean_price(mrp_el.get_text()) if mrp_el else None
+                    # Sanity: MRP must be >= price
+                    if mrp and price and mrp < price:
+                        mrp = None
 
                     rating_el = card.select_one("span.a-icon-alt")
                     rating = None
@@ -150,8 +202,15 @@ class AmazonScraper(BaseScraper):
                         else search_url
                     )
 
+                    # Get high-res image — prefer data-src over src (lazy load)
                     img_el = card.select_one("img.s-image")
-                    image_url = img_el["src"] if img_el and "src" in img_el.attrs else None
+                    image_url = None
+                    if img_el:
+                        image_url = (
+                            img_el.get("data-src")
+                            or img_el.get("src")
+                            or None
+                        )
 
                     results.append(ProductData(
                         platform="amazon",
@@ -170,11 +229,9 @@ class AmazonScraper(BaseScraper):
         except Exception:
             pass  # Fall through to seed catalog
 
-        # Always use seed catalog as fallback if no valid phone results
         if not results:
             fallback = get_fallback_product(query, "amazon")
             if fallback:
                 results.append(fallback)
-            # If nothing in seed either → the matcher will return NOT_FOUND sentinel
 
         return results

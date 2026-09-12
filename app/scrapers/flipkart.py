@@ -1,7 +1,11 @@
-"""
+﻿"""
 Flipkart India Smartphone Scraper
 Uses curl_cffi to impersonate real Chrome TLS fingerprints and bypass bot detection.
 Falls back to seed catalog on blocking. NEVER synthesizes fake prices.
+
+Price fix: Flipkart frequently changes CSS class names. Use multiple selectors
+and also try span.a-offscreen-style hidden price elements. The current price
+class is Nx9bqj but also try hl05eU > div which gives full price text.
 """
 
 import re
@@ -25,12 +29,61 @@ class FlipkartScraper(BaseScraper):
     def _clean_price(self, text: Optional[str]) -> Optional[float]:
         if not text:
             return None
-        cleaned = re.sub(r"[^\d.]", "", text.strip())
+        # Remove rupee symbol, commas, spaces
+        cleaned = re.sub(r"[^\d.]", "", text.strip()).rstrip(".")
         try:
             val = float(cleaned)
             return val if 3000 <= val <= 200000 else None
         except ValueError:
             return None
+
+    def _extract_current_price(self, card) -> Optional[float]:
+        """
+        Extract selling price from Flipkart card.
+        Flipkart changes class names frequently — try all known variants.
+        """
+        # All known Flipkart current-price selectors (newest first)
+        price_selectors = [
+            "div.Nx9bqj",          # 2024 layout
+            "div.hl05eU div.Nx9bqj",
+            "div._30jeq3",         # older layout
+            "div._1_WHN1",         # older
+            "span._1vC4OE",        # mobile layout
+            "div.hl05eU > div:first-child",  # container approach
+        ]
+        for sel in price_selectors:
+            el = card.select_one(sel)
+            if el:
+                text = el.get_text(strip=True)
+                price = self._clean_price(text)
+                if price:
+                    return price
+
+        # Last resort: find any text matching ₹ followed by digits in plausible range
+        all_text = card.get_text()
+        matches = re.findall(r"₹\s*([\d,]+)", all_text)
+        for m in matches:
+            price = self._clean_price(m)
+            if price:
+                return price
+
+        return None
+
+    def _extract_mrp(self, card) -> Optional[float]:
+        """Extract MRP (struck-through original price)."""
+        mrp_selectors = [
+            "div.yRaY8j",      # 2024
+            "div.WW3Bm1",      # 2024 alt
+            "div._3I9_wc",     # older
+            "div._3auQ3N",     # older alt
+        ]
+        for sel in mrp_selectors:
+            el = card.select_one(sel)
+            if el:
+                mrp = self._clean_price(el.get_text())
+                if mrp:
+                    return mrp
+        return None
 
     def _stock_from_text(self, text: str) -> tuple[StockStatus, str]:
         t = text.lower()
@@ -40,12 +93,11 @@ class FlipkartScraper(BaseScraper):
             return StockStatus.CURRENTLY_UNAVAILABLE, "Currently Unavailable on Flipkart"
         if "coming soon" in t:
             return StockStatus.CURRENTLY_UNAVAILABLE, "Coming Soon on Flipkart"
-        return StockStatus.IN_STOCK, "In Stock — Flipkart Assured"
+        return StockStatus.IN_STOCK, "In Stock ✓ Flipkart Assured"
 
     def search(self, query: str, force_live: bool = False) -> List[ProductData]:
         """Search Flipkart. Returns only genuine phone matches, never fake data."""
         results: List[ProductData] = []
-        # Use the exact query — do NOT append 'mobile' (causes unrelated items)
         encoded = urllib.parse.quote_plus(query)
         search_url = f"{self.base_url}/search?q={encoded}"
 
@@ -63,10 +115,10 @@ class FlipkartScraper(BaseScraper):
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, "html.parser")
 
-                # Flipkart changes CSS classes frequently — try multiple selectors
                 card_selectors = [
                     "div.tUxRFH", "div._75nlfW", "div._1AtVbE",
-                    "div._2kHMtA", "div._13oc-S", "div.DOjaWF"
+                    "div._2kHMtA", "div._13oc-S", "div.DOjaWF",
+                    "div.slAVV4",  # 2024 grid layout
                 ]
                 cards = []
                 for sel in card_selectors:
@@ -77,7 +129,7 @@ class FlipkartScraper(BaseScraper):
 
                 for card in cards[:8]:
                     title_el = card.select_one(
-                        "div.KzDlHZ, div._4rR01T, a.s1Q9rs, div._2WkVRV, div.syl9yP"
+                        "div.KzDlHZ, div._4rR01T, a.s1Q9rs, div._2WkVRV, div.syl9yP, a.IRpwTa"
                     )
                     if not title_el:
                         continue
@@ -88,11 +140,12 @@ class FlipkartScraper(BaseScraper):
                                                 "cable", "pouch", "charger", "skin", "bumper"]):
                         continue
 
-                    price_el = card.select_one("div.Nx9bqj, div._30jeq3, div.hl05eU")
-                    price = self._clean_price(price_el.get_text()) if price_el else None
+                    price = self._extract_current_price(card)
+                    mrp = self._extract_mrp(card)
 
-                    mrp_el = card.select_one("div.yRaY8j, div._3I9_wc, div.WW3Bm1")
-                    mrp = self._clean_price(mrp_el.get_text()) if mrp_el else None
+                    # Sanity: MRP must be >= price
+                    if mrp and price and mrp < price:
+                        mrp = None
 
                     rating_el = card.select_one("div.XQDdHH, div._3LWZlK, span.Y1HWO0")
                     rating = None
@@ -132,8 +185,18 @@ class FlipkartScraper(BaseScraper):
                     else:
                         product_url = search_url
 
+                    # Get image — try data-src first (lazy-loaded), then src
                     img_el = card.select_one("img")
-                    image_url = img_el.get("src") if img_el else None
+                    image_url = None
+                    if img_el:
+                        image_url = (
+                            img_el.get("data-src")
+                            or img_el.get("src")
+                            or None
+                        )
+                    # Skip placeholder/loading spinner images
+                    if image_url and ("placeholder" in image_url or "spinner" in image_url):
+                        image_url = None
 
                     results.append(ProductData(
                         platform="flipkart",
