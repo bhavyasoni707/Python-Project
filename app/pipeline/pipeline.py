@@ -104,6 +104,14 @@ class ComparisonPipeline:
                 matched_fpk = _seed_fpk
                 match_score = max(match_score, 80.0)
 
+        # Stage 3c: Photos — scraped listings don't always carry a usable image,
+        # so fill any gap with the phone's bundled catalog photo.
+        _seed_photo = _get_seed(cleaned_query, "flipkart")
+        if _seed_photo and _seed_photo.image_url:
+            for _p in (matched_amz, matched_fpk):
+                if _p is not None and not _p.image_url:
+                    _p.image_url = _seed_photo.image_url
+
         log_stage(
             stage_id=3,
             name="Fuzzy Variant Matching",

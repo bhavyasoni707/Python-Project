@@ -33,7 +33,8 @@ class SmartphoneMatcher:
         "case", "cover", "tempered glass", "screen protector", "cable",
         "pouch", "charger", "adapter", "earphone", "headphone", "skin",
         "back cover", "flip cover", "wallet case", "bumper", "stylus",
-        "stand", "holder", "mount", "powerbank", "power bank"
+        "stand", "holder", "mount", "powerbank", "power bank", "back panel",
+        "display combo", "battery replacement"
     ]
 
     # Known brand names — used for brand-first filtering
@@ -109,7 +110,9 @@ class SmartphoneMatcher:
             "smartphone", "mobile", "phone", "5g", "4g", "india", "in",
             "buy", "best", "new", "latest", "official", "original"
         }
-        keywords = [t.lower() for t in tokens if t.lower() not in stopwords and len(t) > 1]
+        # Single digits are kept: they are model numbers ("Pixel 8", "Nothing Phone 2")
+        keywords = [t.lower() for t in tokens
+                    if t.lower() not in stopwords and (len(t) > 1 or t.isdigit())]
         return keywords
 
     @staticmethod
@@ -118,22 +121,33 @@ class SmartphoneMatcher:
         title_lower = title.lower()
         return any(kw in title_lower for kw in SmartphoneMatcher.ACCESSORY_KEYWORDS)
 
+    # Words that denote a different model tier. A title carrying one of these
+    # that the query doesn't ask for is a different phone
+    # (e.g. "iPhone 15 Plus" for "iPhone 15", "CMF Phone 2 Pro" for "Nothing Phone 2").
+    VARIANT_WORDS = {"pro", "max", "plus", "ultra", "lite", "mini", "fe", "se",
+                     "neo", "prime", "cmf", "fold", "flip", "edge"}
+
+    @staticmethod
+    def _tokens(text: str) -> List[str]:
+        text = text.lower().replace("+", " plus ")
+        return re.findall(r"[a-z0-9]+", text)
+
     @classmethod
     def title_matches_query(cls, title: str, query_keywords: List[str]) -> bool:
         """
-        Returns True ONLY if ALL query keywords appear in the product title.
+        Returns True ONLY if ALL query keywords appear in the product title
+        as whole words, and the title names no extra model tier.
         This is the core strict matching gate — prevents wrong phone matches.
 
-        Special handling:
+        - '15' must be a whole word: it does not match '150' or '15e'
         - 'pro max' in query → title must contain BOTH 'pro' AND 'max'
-        - 'ultra' in query → title must contain 'ultra'
-        - Numbers like '15', '24', '12' must appear in title
+        - 'iphone 15' does NOT match 'iPhone 15 Plus' / 'iPhone 15 Pro'
         """
-        title_lower = title.lower()
-        # Normalize title for matching
-        title_lower = title_lower.replace("+", " plus").replace("pro+", "pro plus")
-
-        return all(kw in title_lower for kw in query_keywords)
+        title_tokens = set(cls._tokens(title))
+        if not all(kw in title_tokens for kw in query_keywords):
+            return False
+        extra_variants = (title_tokens & cls.VARIANT_WORDS) - set(query_keywords)
+        return not extra_variants
 
     @classmethod
     def storage_matches(cls, title: str, query_storage: Optional[str]) -> bool:
@@ -168,7 +182,9 @@ class SmartphoneMatcher:
             if not cls.storage_matches(product.title, query_storage):
                 continue
             filtered.append(product)
-        return filtered
+        # A buyable listing of the same model/storage beats an unavailable colour variant
+        in_stock = [p for p in filtered if p.stock_status == StockStatus.IN_STOCK]
+        return in_stock or filtered
 
     @classmethod
     def match_best_pair(

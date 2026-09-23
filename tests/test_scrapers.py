@@ -13,9 +13,9 @@ def test_fallback_seed_structure():
     assert "amazon" in FALLBACK_PHONES["iphone 15"]
     assert "flipkart" in FALLBACK_PHONES["iphone 15"]
 
-    # Verify out of stock test case is present
+    # Verify unavailable-on-Flipkart test case is present
     assert "oneplus 12" in FALLBACK_PHONES
-    assert FALLBACK_PHONES["oneplus 12"]["flipkart"].stock_status == StockStatus.OUT_OF_STOCK
+    assert FALLBACK_PHONES["oneplus 12"]["flipkart"].stock_status == StockStatus.CURRENTLY_UNAVAILABLE
 
     # Verify unavailable test case is present
     assert "pixel 8" in FALLBACK_PHONES

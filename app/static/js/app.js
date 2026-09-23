@@ -269,7 +269,6 @@ function renderUI(data) {
     document.getElementById('amzRating').innerHTML = amz?.rating
         ? `<span class="rating-stars">★</span> ${amz.rating} <span style="color:var(--text-muted)">(${Number(amz.reviews_count || 0).toLocaleString('en-IN')} reviews)</span>`
         : `<span class="rating-stars">★</span> —`;
-    document.getElementById('amzBuyBtn').href = amz?.product_url || '#';
 
     const amzCard = document.getElementById('amazonCard');
     amzCard.classList.remove('winner-card-amazon', 'winner-card-flipkart');
@@ -286,7 +285,6 @@ function renderUI(data) {
     document.getElementById('fpkRating').innerHTML = fpk?.rating
         ? `<span class="rating-stars">★</span> ${fpk.rating} <span style="color:var(--text-muted)">(${Number(fpk.reviews_count || 0).toLocaleString('en-IN')} reviews)</span>`
         : `<span class="rating-stars">★</span> —`;
-    document.getElementById('fpkBuyBtn').href = fpk?.product_url || '#';
 
     const fpkCard = document.getElementById('flipkartCard');
     fpkCard.classList.remove('winner-card-amazon', 'winner-card-flipkart');
